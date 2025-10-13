@@ -1,6 +1,9 @@
-import { renderLandingPage } from './pages/LandingPage';
-import { renderRegistrationPage } from './pages/RegistrationPage';
-import { renderGamePage } from './pages/GamePage';
+import { renderLandingPage } from './HomePage';
+import { renderRegistrationPage } from './Modes/GuestMode/multiMode.ts/multiPlayer';
+import { renderGamePage } from './game/GamePage';
+import { GuestPage } from './Modes/GuestMode/GuestPage';
+import {NotFoundPage} from './pages/Error404';
+import {renderOpponentSettingsPage} from './Modes/GuestMode/singleMode/singlePlayer'
 export function initRouter() {
   const app = document.getElementById('app');
   if (!app) return;
@@ -15,11 +18,21 @@ function render(path: string) {
   const app = document.getElementById('app');
   if (!app) return;
 
-  if (path === '/game') {
-    renderGamePage();
-  } else if (path === '/register') {
+  if(path === '/guestmode'){
+    GuestPage();
+  }
+  else if (path === '/game') {
+    renderGamePage("guest");
+  } else if (path === '/multimode') {
     renderRegistrationPage();
-  } else {
+  }
+  else if(path === '/singlemode'){
+    renderOpponentSettingsPage();
+  }
+   else if(path === '/') {
     renderLandingPage();
+  }
+  else{
+    NotFoundPage();
   }
 }

@@ -12,10 +12,12 @@
 -  Major Module : backend (fastify , nodejs)                 (1)
 -  Minor Module : database (sqlite3)                         (.5)
 - Major module: Designing the Backend as Microservices           (1)
-
-## Next:
 - Minor module: Expanding Browser Compatibility                 (.5)
-- Major module: Store the score of a tournament in the Blockchain (1)
+-- Major module: Introduce an AI opponent. (1)
+
+## need more work:
+Major module: Multiple players (1)
+
 
 
 ## total

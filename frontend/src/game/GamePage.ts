@@ -1,0 +1,206 @@
+import { startGame } from './GameAlgo';
+
+/** Types */
+type GameSettings = {
+  mode: string;
+  winScore: number;
+  ballSpeed: number;
+  paddleSpeed: number;
+};
+
+/** Fetch players from backend */
+async function getAliasQueue(): Promise<string[]> {
+  const res = await fetch('http://localhost:3100/players');
+  const data = await res.json();
+
+  const queue = Array.isArray(data)
+    ? data
+        .map((p: any) =>
+          typeof p === 'string'
+            ? p.trim()
+            : p && typeof p.alias === 'string'
+            ? p.alias.trim()
+            : ''
+        )
+        .filter((alias: string) => alias !== '')
+    : [];
+
+  console.log('Queue from DB:', queue);
+  return queue;
+}
+
+/** Save match result */
+async function saveMatch(winner: string, p1: string, p2: string) {
+  const res = await fetch('http://localhost:3102/matches', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ winner, player1: p1, player2: p2 }),
+  });
+
+  if (!res.ok) {
+    console.error('Failed to save match', await res.text());
+  }
+}
+
+/** ---- LOCAL STORAGE HELPERS ---- */
+function getGameSettings(mode: string): GameSettings {
+  const saved = localStorage.getItem(`settings_${mode}`);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Invalid settings in localStorage for', mode, e);
+    }
+  }
+  return {
+    mode: 'custom',
+    winScore: 4,
+    ballSpeed: 0.8,
+    paddleSpeed: 5,
+  };
+}
+
+
+
+/*** helper ***/
+function showMessage(winner: string, message: string) {
+  const mssg = document.getElementById('mssg');
+  if (!mssg) return;
+  mssg.innerHTML = `
+    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 backdrop-blur-md 
+      bg-black/70 border border-purple-700 text-cyan-300 text-lg px-8 py-3 rounded-xl shadow-xl 
+      animate-pulse">
+      🏆 <span class="font-bold text-white">${winner}</span> ${message}
+    </div>`;
+}
+
+/** ---- MAIN RENDER ---- */
+export async function renderGamePage( mode : string , queueOverride?: string[], scores?: Record<string, number> ) {
+  const app = document.getElementById('app');
+  if (!app) return;
+
+  // Load queueu (if  it's defined in the parameters (single mode) , default (multiMode) (getAliasQueue() : from backend))
+  const queue = queueOverride ?? (await getAliasQueue());
+  const playerScores: Record<string, number> = scores ?? {};
+
+
+  //// multiMode
+  if (queue.length < 2 && "multiMode" == mode ) {
+    const winner = queue[0] || 'No one';
+    const topPlayer = Object.entries(playerScores).sort((a, b) => b[1] - a[1])[0];
+    const finalWinner = topPlayer ? topPlayer[0] : winner;
+    app.innerHTML = `
+      <div class="flex flex-col justify-center items-center h-screen text-white bg-gradient-to-br from-black via-purple-900 to-blue-900">
+        <h1 class="text-5xl font-extrabold mb-6 text-cyan-400 drop-shadow-lg animate-pulse">🏁 Tournament Finished!</h1>
+        <h2 class="text-3xl text-purple-300 mb-4">Champion: <span class="text-white">${finalWinner}</span></h2>
+        ${
+          topPlayer
+            ? `<p class="text-lg text-gray-300 mb-6">Total Wins: <span class="text-cyan-300 font-semibold">${topPlayer[1]}</span></p>`
+            : ''
+        }
+        <button onclick="location.href='/multimode'" 
+          class="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white text-lg font-bold 
+          hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-xl hover:shadow-cyan-500/50">
+          ⬅ Back to Home
+        </button>
+      </div>
+    `;
+    return;
+  }
+    //// single mode
+  else if(queue.length < 2 && "multiMode" != mode){
+      app.innerHTML = `
+      <div class="flex flex-col justify-center items-center h-screen text-white bg-gradient-to-br from-black via-purple-900 to-blue-900">
+          "zabi"
+      </div>
+    `;
+    return;
+  }
+
+  const [p1, p2] = queue;
+  const settings = getGameSettings(mode);
+
+  const next = (mode == "multiMode") && "▶ Next Match" || "new match";
+  app.innerHTML = `
+    <div class="relative h-screen w-screen bg-gradient-to-br from-[#0a0020] via-[#030014] to-[#000000] overflow-hidden flex flex-col justify-center items-center">
+      <!-- Animated glowing beams -->
+      <div class="absolute inset-0 overflow-hidden z-0">
+        <div class="absolute top-0 left-1/4 w-[2px] h-full bg-gradient-to-b from-cyan-500 to-transparent opacity-30 animate-pulse"></div>
+        <div class="absolute top-0 right-1/4 w-[2px] h-full bg-gradient-to-b from-pink-500 to-transparent opacity-30 animate-pulse delay-300"></div>
+      </div>
+
+      <!-- Score & Canvas -->
+      <div id="mssg" class="z-20"></div>
+      <canvas id="pong" width="640" height="480"
+        class="z-20 border-2 border-cyan-400/60 rounded-2xl shadow-[0_0_25px_rgba(0,255,255,0.5)] backdrop-blur-md bg-black/60">
+      </canvas>
+
+      <!-- Buttons -->
+      <div class="z-20 mt-10 flex space-x-6">
+        <button id="nextMatch" 
+          class="hidden px-8 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl text-white text-lg font-semibold 
+          shadow-lg hover:shadow-cyan-500/40 hover:scale-105 transition-all duration-300">
+          ${next}
+        </button>
+        <button onclick="location.href='/guestmode'"
+          class="px-8 py-3 bg-gradient-to-r from-gray-700 to-gray-800 rounded-xl text-white text-lg font-semibold 
+          shadow-lg hover:shadow-red-500/30 hover:scale-105 transition-all duration-300">
+          ✖ Exit
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Start the match
+  startGame(async (winner: string) => {
+    await saveMatch(winner, p1, p2);
+
+    // Track wins
+    playerScores[winner] = (playerScores[winner] || 0) + 1;
+
+    showMessage(winner, 'wins! Click Next Match to continue.');
+
+    const nextMatchBtn = document.getElementById('nextMatch');
+    if (nextMatchBtn) {
+      nextMatchBtn.classList.remove('hidden');
+
+      nextMatchBtn.onclick = () => {
+        /////////////////////////////////////////////////////// queue algo multiMode
+        if("multiMode" == mode){
+                // Eliminate loser and keep the winner
+                const newQueue = queue.filter(
+                  (player) => player === winner || (player !== p1 && player !== p2)
+                );
+                // Move winner to the front
+                const updatedQueue = [winner, ...newQueue.filter((p) => p !== winner)];
+                renderGamePage(mode , updatedQueue, playerScores);
+        }
+         /////////////////////////////////////////////////////// queue algo singleMode
+      else if("singleplayer" == mode)  {
+                      const humanPlayer = queue[0]; // always the main player
+                      const opponents = queue.slice(1); // all AI bots
+
+                      // Find which opponent was just played (p1 or p2 is one of the AIs)
+                      const currentOpponentIndex = opponents.findIndex((p) => p === p1 || p === p2);
+
+                      // Calculate the next opponent in sequence
+                      const nextIndex =
+                        currentOpponentIndex >= 0
+                          ? (currentOpponentIndex + 1) % opponents.length
+                          : 0; // default to first if not found
+
+                      const nextOpponent = opponents[nextIndex];
+
+                      // Build new queue: player always first, next AI second
+                      const updatedQueue = [humanPlayer, nextOpponent];
+
+                      console.log(`Next opponent: ${nextOpponent}`);
+
+                      renderGamePage(mode, updatedQueue, playerScores);
+}
+
+        
+      };
+    }
+  }, settings, p1, p2);
+}

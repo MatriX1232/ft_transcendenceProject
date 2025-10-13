@@ -1,0 +1,1 @@
+-- profile player (single mode) : google authentication / profile page ( profil photo + statistique + level bar )/ adversaire : Ai ( choose level)
