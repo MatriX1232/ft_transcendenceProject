@@ -22,3 +22,7 @@ Major module: Multiple players (1)
 
 ## total
  - (7.5) > mondatory part == 7
+
+
+## next 
+-- profile player (single mode) : google authentication / profile page ( profil photo + statistique + level bar )/ adversaire : Ai ( choose level)
