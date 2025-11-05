@@ -313,7 +313,7 @@ export function renderLoginPage() {
   }
 
   // Helper: show registration code / setup modal (for email code or authApp secret)
-  function showRegistrationCodeModal(code: string | null, authType: string, extra?: { otpauth_url?: string }) {
+  function showRegistrationCodeModal(user: { id: any; email?: string }, code: string | null, authType: string, extra?: { otpauth_url?: string }) {
     // remove if exists
     const existing = document.getElementById('regCodeModal');
     if (existing) existing.remove();
@@ -325,43 +325,57 @@ export function renderLoginPage() {
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4';
     modal.innerHTML = `
       <div class="max-w-md w-full bg-white/5 backdrop-blur-lg border border-white/20 rounded-2xl p-6 text-white">
-        <h3 class="text-2xl font-semibold mb-2">
-          ${isAuthApp ? 'Set up Authenticator App' : 'Registration 2FA Setup'}
+        <h3 id="regModalTitle" class="text-2xl font-semibold mb-2">
+          ${isAuthApp ? 'Set up Authenticator App' : 'Verify Your Email'}
         </h3>
-        <p class="text-sm text-cyan-200 mb-4">
-          ${isAuthApp ? 'Scan the image below with your authenticator app.' : 'A verification code was sent to your email.'}
+        <p id="regModalMessage" class="text-sm text-cyan-200 mb-4">
+          ${isAuthApp ? 'Scan the image below with your authenticator app.' : 'To complete registration, please enter the code sent to your email.'}
         </p>
 
         ${isAuthApp ? `
+          <!-- Auth App QR and Secret Display -->
           <div class="mb-4 bg-white p-4 rounded-lg flex justify-center">
             <canvas id="qrCanvas"></canvas>
           </div>
           <div class="mb-4">
             <label class="text-xs text-cyan-200 block mb-2">Or enter this secret key manually:</label>
-            <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words" id="regCodeDisplay">
+            <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words">
               ${code || 'Error: No secret key provided.'}
             </div>
           </div>
         ` : `
-          <div class="mb-4">
-            <label class="text-xs text-cyan-200 block mb-2">Verification Code</label>
-            <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words" id="regCodeDisplay">
-              ${code ? String(code) : '<span class="text-cyan-300">(no code returned by server — check email)</span>'}
+          <!-- Email Verification Input -->
+          <div id="emailVerificationContent">
+            <div class="mb-4">
+              <input id="regCodeInput" type="text" maxlength="6" placeholder="Enter verification code"
+                     class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none" />
+            </div>
+            <div class="flex items-center justify-between">
+               <button id="resendRegCodeBtn" class="text-sm text-cyan-200 underline">Resend code</button>
+               <div id="regCodeError" class="text-sm text-red-400"></div>
             </div>
           </div>
         `}
 
-        <div class="flex gap-3 mt-3">
-          <button id="closeRegCodeBtn" class="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold">Proceed to login</button>
-          <button id="dismissRegCodeBtn" class="flex-1 py-2 bg-gray-800/40 rounded-xl">Close</button>
+        <div id="regModalButtons" class="flex gap-3 mt-4">
+          ${isAuthApp ? `
+            <button id="proceedToLoginBtn" class="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold">Proceed to Login</button>
+            <button id="dismissRegCodeBtn" class="flex-1 py-2 bg-gray-800/40 rounded-xl">Close</button>
+          ` : `
+            <button id="verifyRegCodeBtn" class="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold">Verify Email</button>
+            <button id="dismissRegCodeBtn" class="flex-1 py-2 bg-gray-800/40 rounded-xl">Cancel</button>
+          `}
         </div>
       </div>
     `;
 
     document.body.appendChild(modal);
 
-    // If it's for an auth app, generate and render the QR code
+    const dismissBtn = document.getElementById('dismissRegCodeBtn') as HTMLButtonElement;
+    dismissBtn.onclick = () => modal.remove();
+
     if (isAuthApp) {
+      // --- Authenticator App Flow ---
       const canvas = document.getElementById('qrCanvas') as HTMLCanvasElement;
       if (canvas && extra.otpauth_url) {
         QRCode.toCanvas(canvas, extra.otpauth_url, { width: 256, margin: 1 }, (error) => {
@@ -371,19 +385,104 @@ export function renderLoginPage() {
           }
         });
       }
+      const proceedBtn = document.getElementById('proceedToLoginBtn') as HTMLButtonElement;
+      proceedBtn.onclick = () => {
+        modal.remove();
+        loginTab.click();
+      };
+    } else {
+      // --- Email Verification Flow ---
+      const regCodeInput = document.getElementById('regCodeInput') as HTMLInputElement;
+      const verifyBtn = document.getElementById('verifyRegCodeBtn') as HTMLButtonElement;
+      const resendBtn = document.getElementById('resendRegCodeBtn') as HTMLButtonElement;
+      const errorDiv = document.getElementById('regCodeError') as HTMLDivElement;
+      const messageP = document.getElementById('regModalMessage') as HTMLParagraphElement;
+      const buttonsDiv = document.getElementById('regModalButtons') as HTMLDivElement;
+      const contentDiv = document.getElementById('emailVerificationContent') as HTMLDivElement;
+      const titleH3 = document.getElementById('regModalTitle') as HTMLHeadingElement;
+
+      const setRegError = (msg: string) => {
+        errorDiv.textContent = msg;
+        setTimeout(() => { errorDiv.textContent = ''; }, 5000);
+      };
+
+      const handleSuccess = () => {
+        titleH3.textContent = 'Email Verified!';
+        messageP.textContent = 'Your registration is complete. You can now log in.';
+        contentDiv.innerHTML = ''; // Remove input and buttons
+        buttonsDiv.innerHTML = `
+          <button id="proceedToLoginBtn" class="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold">Proceed to Login</button>
+        `;
+        const proceedBtn = document.getElementById('proceedToLoginBtn') as HTMLButtonElement;
+        proceedBtn.onclick = () => {
+          modal.remove();
+          loginTab.click();
+        };
+      };
+
+      const sendCode = async () => {
+        try {
+          resendBtn.textContent = 'Sending...';
+          resendBtn.disabled = true;
+          const res = await fetch(`${API_URL_2FA}/auth/2fa/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, email: user.email })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to send code');
+          }
+          messageP.textContent = 'A new code has been sent to your email.';
+          // Cooldown timer
+          let cooldown = 30;
+          const interval = setInterval(() => {
+            cooldown -= 1;
+            resendBtn.textContent = `Resend (${cooldown}s)`;
+            if (cooldown <= 0) {
+              clearInterval(interval);
+              resendBtn.disabled = false;
+              resendBtn.textContent = 'Resend code';
+            }
+          }, 1000);
+        } catch (err) {
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Resend code';
+          setRegError((err as Error).message);
+        }
+      };
+
+      resendBtn.onclick = (e) => {
+        e.preventDefault();
+        sendCode();
+      };
+
+      verifyBtn.onclick = async () => {
+        const code = regCodeInput.value.trim();
+        if (!code) {
+          setRegError('Please enter the code.');
+          return;
+        }
+        try {
+          verifyBtn.textContent = 'Verifying...';
+          verifyBtn.disabled = true;
+          const res = await fetch(`${API_URL_2FA}/auth/2fa/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, code })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Verification failed');
+          }
+          handleSuccess();
+        } catch (err) {
+          setRegError((err as Error).message);
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = 'Verify Email';
+        }
+      };
     }
-
-    const closeBtn = document.getElementById('closeRegCodeBtn') as HTMLButtonElement;
-    const dismissBtn = document.getElementById('dismissRegCodeBtn') as HTMLButtonElement;
-
-    closeBtn.onclick = () => {
-      modal.remove();
-      // switch to login tab
-      loginTab.click();
-    };
-    dismissBtn.onclick = () => {
-      modal.remove();
-    };
   }
 
   // Login handler
@@ -523,7 +622,7 @@ export function renderLoginPage() {
 
             const returnedCode = sendData.code || null;
             console.debug('2FA email code sent/returned:', returnedCode);
-            showRegistrationCodeModal(returnedCode, 'email');
+            showRegistrationCodeModal(createdUser, returnedCode, 'email');
             return;
           } else if (authType === 'authApp') {
             // Ask 2FA service to set up TOTP for the user and return secret/otpauth_url (for QR)
@@ -536,7 +635,7 @@ export function renderLoginPage() {
             if (!setupRes.ok) throw new Error(setupData.error || 'Failed to setup authenticator app');
 
             const secretOrCode = setupData.secret || setupData.code || null;
-            showRegistrationCodeModal(secretOrCode, 'authApp', { otpauth_url: setupData.otpauth_url });
+            showRegistrationCodeModal(createdUser, secretOrCode, 'authApp', { otpauth_url: setupData.otpauth_url });
             return;
           }
         } catch (err) {
