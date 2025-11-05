@@ -402,7 +402,7 @@ async function testMailSend()
 
 const start = async () => {
   try {
-    await testMailSend();
+    // await testMailSend();
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     console.log(`2FA Service running on http://0.0.0.0:${PORT}`);

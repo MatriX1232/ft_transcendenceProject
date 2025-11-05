@@ -1,3 +1,5 @@
+import QRCode from 'qrcode';
+
 const API_URL = 'http://localhost:3103';
 const API_URL_2FA = 'http://localhost:3105';
 
@@ -316,32 +318,38 @@ export function renderLoginPage() {
     const existing = document.getElementById('regCodeModal');
     if (existing) existing.remove();
 
+    const isAuthApp = authType === 'authApp' && extra?.otpauth_url;
+
     const modal = document.createElement('div');
     modal.id = 'regCodeModal';
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4';
     modal.innerHTML = `
       <div class="max-w-md w-full bg-white/5 backdrop-blur-lg border border-white/20 rounded-2xl p-6 text-white">
-        <h3 class="text-2xl font-semibold mb-2">Registration 2FA Setup</h3>
+        <h3 class="text-2xl font-semibold mb-2">
+          ${isAuthApp ? 'Set up Authenticator App' : 'Registration 2FA Setup'}
+        </h3>
         <p class="text-sm text-cyan-200 mb-4">
-          ${authType === 'email' ? 'A verification code was sent to your email.' : 'Set up your authenticator app with the secret below.'}
+          ${isAuthApp ? 'Scan the image below with your authenticator app.' : 'A verification code was sent to your email.'}
         </p>
 
-        <div class="mb-4">
-          <label class="text-xs text-cyan-200 block mb-2">Code / Secret</label>
-          <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words" id="regCodeDisplay">
-            ${code ? String(code) : '<span class="text-cyan-300">(no code returned by server — check email)</span>'}
+        ${isAuthApp ? `
+          <div class="mb-4 bg-white p-4 rounded-lg flex justify-center">
+            <canvas id="qrCanvas"></canvas>
           </div>
-        </div>
-
-        ${extra && extra.otpauth_url ? `
           <div class="mb-4">
-            <label class="text-xs text-cyan-200 block mb-2">Authenticator URL (otpauth)</label>
-            <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words">
-              <a href="${extra.otpauth_url}" target="_blank" class="underline text-cyan-200">Open otpauth URL (for QR)</a>
+            <label class="text-xs text-cyan-200 block mb-2">Or enter this secret key manually:</label>
+            <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words" id="regCodeDisplay">
+              ${code || 'Error: No secret key provided.'}
             </div>
-            <div class="text-xs text-cyan-200 mt-2">Use this in your authenticator app (or scan a QR generated from this URL).</div>
           </div>
-        ` : ''}
+        ` : `
+          <div class="mb-4">
+            <label class="text-xs text-cyan-200 block mb-2">Verification Code</label>
+            <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words" id="regCodeDisplay">
+              ${code ? String(code) : '<span class="text-cyan-300">(no code returned by server — check email)</span>'}
+            </div>
+          </div>
+        `}
 
         <div class="flex gap-3 mt-3">
           <button id="closeRegCodeBtn" class="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold">Proceed to login</button>
@@ -351,6 +359,19 @@ export function renderLoginPage() {
     `;
 
     document.body.appendChild(modal);
+
+    // If it's for an auth app, generate and render the QR code
+    if (isAuthApp) {
+      const canvas = document.getElementById('qrCanvas') as HTMLCanvasElement;
+      if (canvas && extra.otpauth_url) {
+        QRCode.toCanvas(canvas, extra.otpauth_url, { width: 256, margin: 1 }, (error) => {
+          if (error) {
+            console.error('QR Code generation failed:', error);
+            canvas.parentElement!.innerHTML = `<p class="text-red-400">Could not generate QR code.</p>`;
+          }
+        });
+      }
+    }
 
     const closeBtn = document.getElementById('closeRegCodeBtn') as HTMLButtonElement;
     const dismissBtn = document.getElementById('dismissRegCodeBtn') as HTMLButtonElement;
