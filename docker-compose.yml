@@ -82,6 +82,8 @@ services:
       - MAILEROO_FROM=${MAILEROO_FROM}
     dns:
       - 1.1.1.1
+    env_file:
+      - ./.env
 
 networks:
   transcendence-network:

@@ -8,11 +8,10 @@ import crypto from 'crypto';
 import { exec } from 'child_process'; // Import exec
 
 export async function sendMailerooEmail(from, to, display_name, subject, html, plain_text) {
-  // const apiKey = process.env.MAILEROO;
-  const apiKey = '048b98ee34401e9ba50f717c0c8ef11b985b82f4522ec8b6e6390409300f3d9c';
+  const apiKey = process.env.MAILEROO;
   if (!apiKey) {
-    throw new Error('Set the MAILEROO environment variable first.');
-    console.log('MAILEROO API key missing');
+    // This error will be caught by the calling function and handled gracefully.
+    throw new Error('MAILEROO API key is not configured in environment variables.');
   }
 
   const url = 'https://smtp.maileroo.com/api/v2/emails';
@@ -50,8 +49,7 @@ export async function sendMailerooEmail(from, to, display_name, subject, html, p
         err.body = stderr;
         return reject(err);
       }
-      // Maileroo can still return an error JSON with a 200 OK from curl's perspective
-      // A simple check for a success-like field in the response is good practice.
+     
       try {
         const response = JSON.parse(stdout);
         // Assuming a successful response has an 'id' or 'status' field. Adjust if needed.
@@ -64,7 +62,6 @@ export async function sendMailerooEmail(from, to, display_name, subject, html, p
           reject(err);
         }
       } catch (parseError) {
-        // If stdout is not JSON, it's likely an unexpected response from a proxy/firewall
         const err = new Error(`Failed to parse Maileroo response: ${stdout}`);
         err.status = 502; // Bad Gateway
         err.body = stdout;
@@ -204,26 +201,25 @@ fastify.post('/auth/2fa/send', async (request, reply) => {
   const plain = `Your verification code is: ${code}\nThis code is valid for 10 minutes.`;
 
   // Try to send via Maileroo if configured. If not configured, fallback to logging and return code (dev).
-  const fromAddress = 'no-reply@19d4dcf591331c5a.maileroo.org';
+  const fromAddress = process.env.MAILEROO_FROM || 'no-reply@example.com';
   const displayName = '2FA Server';
 
   if (recipient) {
     try {
-      // if ('048b98ee34401e9ba50f717c0c8ef11b985b82f4522ec8b6e6390409300f3d9c') {
-      //   // dev fallback: log and return code
-      //   fastify.log.warn('MAILEROO not configured — logging code instead of sending email');
-      //   fastify.log.info(`2FA email code for ${recipient}: ${code} (valid until ${new Date(validUntil).toISOString()})`);
-      //   return reply.send({ success: true, method: 'console', code });
-      // }
+      if (!process.env.MAILEROO) {
+        fastify.log.warn('MAILEROO env variable not set — logging code instead of sending email');
+        fastify.log.info(`2FA email code for ${recipient}: ${code}`);
+        // In development, we return the code to make testing easier.
+        return reply.send({ success: true, method: 'console', code });
+      }
 
-      // send mail
       fastify.log.info(`2FA code emailed to ${recipient} for user ${userId || email}`);
       const response = await sendMailerooEmail(fromAddress, recipient, displayName, subject, html, plain);
       fastify.log.debug(`Maileroo response: ${response}`);
-      // Production: do NOT return the code in response
+      
       return reply.send({ success: true, method: 'maileroo' });
     } catch (err) {
-      fastify.log.error({ err, status: err.status, body: err.body }, 'Failed to send 2FA email via Maileroo');
+      fastify.log.error({ err, status: err.status, body: err.body }, 'Failed to send 2FA email');
       return reply.status(500).send({
         success: false,
         error: 'Failed to send email',
@@ -353,12 +349,6 @@ fastify.post('/auth/2fa/status', async (request, reply) => {
     return reply.send({ requires2FA: true, type: 'authApp' });
   }
 
-  // If you have access to users database, query it:
-  // const user = db.prepare('SELECT auth_type FROM users WHERE id = ?').get(userId);
-  // if (user && user.auth_type) {
-  //   return reply.send({ requires2FA: true, type: user.auth_type });
-  // }
-
   // For now, assume all users require 2FA via email if not configured for authApp
   return reply.send({ requires2FA: true, type: 'email' });
 });
@@ -384,7 +374,7 @@ async function testMailSend()
 {
   try {
     const responseHtml = await sendMailerooEmail(
-      'no-reply@19d4dcf591331c5a.maileroo.org',
+      process.env.MAILEROO_FROM || 'no-reply@example.com',
       'stormer0209@gmail.com',
       'Mateusz',
       'Your one-time code',
