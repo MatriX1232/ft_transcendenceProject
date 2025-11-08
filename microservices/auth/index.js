@@ -4,8 +4,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-// import axios from 'axios';
-import { exec } from 'child_process'; // Import exec
+import { exec } from 'child_process';
 
 export async function sendMailerooEmail(from, to, display_name, subject, html, plain_text) {
   const apiKey = process.env.MAILEROO;
@@ -75,6 +74,39 @@ export async function sendMailerooEmail(from, to, display_name, subject, html, p
 const fastify = Fastify({ logger: true });
 const PORT = process.env.PORT || 3105;
 
+const JWT_SECRET = process.env.JWT_SECRET || 'development-secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
+
+function base64url(input) {
+  return Buffer.from(input).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function parseExpiry(value) {
+  if (typeof value === 'number') return value;
+  const match = /^(\d+)([smhd])?$/.exec(String(value).trim());
+  if (!match) return 3600;
+  const amount = Number(match[1]);
+  const unit = match[2] || 's';
+  const multipliers = { s: 1, m: 60, h: 3600, d: 86400 };
+  return amount * multipliers[unit];
+}
+
+function createJWT(payload, expiresIn = '1h', secret = JWT_SECRET) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const expSeconds = parseExpiry(expiresIn);
+  const fullPayload = { ...payload, exp: Math.floor(Date.now() / 1000) + expSeconds };
+  const headerPart = base64url(JSON.stringify(header));
+  const payloadPart = base64url(JSON.stringify(fullPayload));
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${headerPart}.${payloadPart}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+  return `${headerPart}.${payloadPart}.${signature}`;
+}
+
 // Initialize SQLite database (kept from original file)
 const dbPath = '/app/database/2fa.db';
 const dbDir = path.dirname(dbPath);
@@ -98,6 +130,7 @@ await fastify.register(cors, {
 });
 
 const token_map = new Map(); // userId -> { type: 'email'|'authApp', code?, secret?, validUntil?, failedAttempts?, lockoutUntil? }
+const registration_tokens = new Map(); // verificationToken -> { email, username, authType, code?, secret?, validUntil }
 
 // Utility: generate numeric code
 function generateNumericCode(length = 6) {
@@ -177,6 +210,79 @@ function generateBase32Secret(bytes = 20) {
 function generateRandomToken(len = 48) {
   return crypto.randomBytes(len).toString('hex');
 }
+
+// Endpoint: Initiate registration process
+fastify.post('/auth/2fa/register/initiate', async (request, reply) => {
+  const { email, username, authType } = request.body || {};
+  if (!email || !username || !authType) {
+    return reply.status(400).send({ error: 'email, username, and authType are required' });
+  }
+
+  const verificationToken = generateRandomToken(32);
+  const validUntil = Date.now() + 10 * 60 * 1000; // 10 minutes validity
+
+  if (authType === 'email') {
+    const code = generateNumericCode(6);
+    registration_tokens.set(verificationToken, { email, username, authType, code, validUntil });
+
+    const subject = 'Verify Your Email for Registration';
+    const html = `<p>Welcome, ${username}!</p><p>Your verification code is: <strong>${code}</strong></p><p>This code is valid for 10 minutes.</p>`;
+    const plain = `Welcome, ${username}!\nYour verification code is: ${code}\nThis code is valid for 10 minutes.`;
+    const fromAddress = process.env.MAILEROO_FROM || 'no-reply@example.com';
+
+    try {
+      if (!process.env.MAILEROO) {
+        fastify.log.warn(`MAILEROO env not set. Registration code for ${email}: ${code}`);
+        return reply.send({ verificationToken });
+      }
+      await sendMailerooEmail(fromAddress, email, username, subject, html, plain);
+      fastify.log.info(`Registration code sent to ${email}`);
+      return reply.send({ verificationToken });
+    } catch (err) {
+      fastify.log.error({ err }, 'Failed to send registration email');
+      return reply.status(500).send({ error: 'Failed to send verification email' });
+    }
+  } else if (authType === 'authApp') {
+    const secret = generateBase32Secret(20);
+    registration_tokens.set(verificationToken, { email, username, authType, secret, validUntil });
+
+    const label = `FTTranscendence:${username}`;
+    const issuer = 'FTTranscendence';
+    const otpauth_url = `otpauth://totp/${encodeURIComponent(label)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+
+    fastify.log.info(`TOTP secret generated for pending registration of user ${username}`);
+    return reply.send({ verificationToken, secret, otpauth_url });
+  } else {
+    return reply.status(400).send({ error: 'Invalid authType specified' });
+  }
+});
+
+// Endpoint: Verify code for a pending registration
+fastify.post('/auth/2fa/register/verify', async (request, reply) => {
+  const { verificationToken, code } = request.body || {};
+  if (!verificationToken || !code) {
+    return reply.status(400).send({ error: 'verificationToken and code are required' });
+  }
+
+  const entry = registration_tokens.get(verificationToken);
+  if (!entry) {
+    return reply.status(400).send({ error: 'Invalid or expired verification token' });
+  }
+
+  if (Date.now() > entry.validUntil) {
+    registration_tokens.delete(verificationToken);
+    return reply.status(400).send({ error: 'Verification token expired' });
+  }
+
+  if (entry.authType === 'email' && entry.code === String(code).trim()) {
+    // For email, the code is one-time. We can now consider it verified.
+    // The user service will consume this token.
+    fastify.log.info(`Registration for ${entry.email} verified successfully.`);
+    return reply.send({ verificationToken });
+  }
+
+  return reply.status(400).send({ error: 'Invalid code' });
+});
 
 // Endpoint: send email code to user (development: returns code when MAILEROO is missing)
 fastify.post('/auth/2fa/send', async (request, reply) => {
@@ -317,8 +423,9 @@ fastify.post('/auth/2fa/verify', async (request, reply) => {
     }
 
     // Return a demo "user" object — in production, fetch actual user from users service
+    const token = createJWT({ userId, authType: entry.type }, JWT_EXPIRES_IN, JWT_SECRET);
     const demoUser = { id: userId, username: `user${userId}` };
-    return reply.send(demoUser);
+    return reply.send({ token, user: demoUser });
   } else {
     // Failure: update attempt counter and potentially lock out
     entry.failedAttempts = (entry.failedAttempts || 0) + 1;
