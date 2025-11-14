@@ -343,15 +343,16 @@ export function renderLoginPage() {
 
         ${isAuthApp ? `
           <!-- Auth App QR and Secret Display -->
-          <div class="mb-4 bg-white p-4 rounded-lg flex justify-center">
+          <div id="qrCanvasWrapper" class="mb-4 bg-white p-4 rounded-lg flex justify-center">
             <canvas id="qrCanvas"></canvas>
           </div>
-          <div class="mb-4">
+          <div id="totpSecretWrapper" class="mb-4">
             <label class="text-xs text-cyan-200 block mb-2">Or enter this secret key manually:</label>
             <div class="bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white break-words">
               ${verificationData.secret || 'Error: No secret key provided.'}
             </div>
           </div>
+          <div id="regCodeError" class="text-sm text-red-400 mb-2 min-h-[1.25rem]"></div>
         ` : `
           <!-- Email Verification Input -->
           <div id="emailVerificationContent">
@@ -386,11 +387,17 @@ export function renderLoginPage() {
     const titleH3 = document.getElementById('regModalTitle') as HTMLHeadingElement;
     const messageP = document.getElementById('regModalMessage') as HTMLParagraphElement;
     const buttonsDiv = document.getElementById('regModalButtons') as HTMLDivElement;
-    const errorDiv = document.getElementById('regCodeError') as HTMLDivElement || document.createElement('div');
-
+    const errorDivContainer = document.getElementById('regCodeError');
+    let errorDiv = errorDivContainer as HTMLDivElement | null;
+    if (!errorDiv) {
+      errorDiv = document.createElement('div');
+      errorDiv.id = 'regCodeError';
+      errorDiv.className = 'text-sm text-red-400 mb-2';
+      buttonsDiv.parentElement?.insertBefore(errorDiv, buttonsDiv);
+    }
     const setRegError = (msg: string) => {
-      errorDiv.textContent = msg;
-      setTimeout(() => { errorDiv.textContent = ''; }, 5000);
+      errorDiv!.textContent = msg;
+      setTimeout(() => { if (errorDiv) errorDiv.textContent = ''; }, 5000);
     };
 
     const handleFinalRegistration = async (finalVerificationData: any) => {
@@ -414,9 +421,10 @@ export function renderLoginPage() {
         if (document.getElementById('emailVerificationContent')) {
           document.getElementById('emailVerificationContent')!.innerHTML = '';
         }
-        if (document.getElementById('qrCanvas')) {
-          document.getElementById('qrCanvas')!.parentElement!.innerHTML = '';
-        }
+        const qrWrapper = document.getElementById('qrCanvasWrapper');
+        if (qrWrapper) qrWrapper.remove();
+        const secretWrapper = document.getElementById('totpSecretWrapper');
+        if (secretWrapper) secretWrapper.remove();
         buttonsDiv.innerHTML = `
           <button id="proceedToLoginBtn" class="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold">Proceed to Login</button>
         `;
