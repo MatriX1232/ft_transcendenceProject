@@ -139,7 +139,7 @@ export function renderRegistrationPage() {
                 <span class="text-pink-500 text-sm">${t('wins')}: ${getWinCount(alias)}</span>
               </div>
             </li>
-          `).join('') : `<li class="italic text-gray-400">${ 'No players yet.'}</li>`} 
+          `).join('') : `<li class="italic text-gray-400">${t('noPlayers')}</li>`} 
         </ul>
 
         <h2 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">${t('matchHistory')}</h2>
