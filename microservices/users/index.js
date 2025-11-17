@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import Database from 'better-sqlite3';
 import bcrypt from 'bcrypt';
 import path from 'path';
@@ -12,6 +13,14 @@ const fastify = Fastify({ logger: true });
 const PORT = process.env.PORT || 3103;
 const MATCHES_SERVICE_URL = process.env.MATCHES_SERVICE_URL || 'http://matches-service:3102';
 const TWO_FA_SERVICE_URL = process.env.TWO_FA_SERVICE_URL || 'http://auth-service:3105';
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 120);
+const RATE_LIMIT_TIME_WINDOW = process.env.RATE_LIMIT_TIME_WINDOW || '1 minute';
+const SENSITIVE_RATE_LIMIT_MAX = Number(process.env.SENSITIVE_RATE_LIMIT_MAX || 10);
+const SENSITIVE_RATE_LIMIT_WINDOW = process.env.SENSITIVE_RATE_LIMIT_WINDOW || '1 minute';
+const RATE_LIMIT_ALLOW_LIST = (process.env.RATE_LIMIT_ALLOW_LIST || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 const nowIso = () => new Date().toISOString();
 
@@ -63,6 +72,17 @@ const ensureDefaultAvatar = () => {
 };
 
 ensureDefaultAvatar();
+
+function buildRateLimitRouteConfig(max = SENSITIVE_RATE_LIMIT_MAX, timeWindow = SENSITIVE_RATE_LIMIT_WINDOW) {
+  return {
+    config: {
+      rateLimit: {
+        max,
+        timeWindow
+      }
+    }
+  };
+}
 
 const db = new Database(dbPath);
 const VALID_STATUSES = new Set(['online', 'offline', 'away']);
@@ -144,6 +164,23 @@ db.exec(`
 await fastify.register(cors, {
   origin: true,
   methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS']
+});
+
+await fastify.register(rateLimit, {
+  global: true,
+  max: RATE_LIMIT_MAX,
+  timeWindow: RATE_LIMIT_TIME_WINDOW,
+  allowList: RATE_LIMIT_ALLOW_LIST,
+  skipOnError: true,
+  addHeaders: true,
+  addHeadersOnSuccess: true,
+  addHeadersOnExceeding: true,
+  errorResponseBuilder: (_request, context) => ({
+    statusCode: 429,
+    error: 'Too Many Requests',
+    message: 'Rate limit exceeded. Please wait before retrying.',
+    retryAfter: Math.ceil(context.ttl / 1000)
+  })
 });
 
 await fastify.register(multipart, {
@@ -797,7 +834,7 @@ fastify.delete('/users/:id', async (request, reply) => {
 });
 
 // Login endpoint
-fastify.post('/auth/login', async (request, reply) => {
+fastify.post('/auth/login', buildRateLimitRouteConfig(), async (request, reply) => {
   const { email, password } = request.body;
   
   if (!email || !password) {

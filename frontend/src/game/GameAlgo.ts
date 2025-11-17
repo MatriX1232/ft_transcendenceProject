@@ -131,7 +131,7 @@ export function startGame(
 
   mountScoreboard();
 
-  // --- Background ---
+  // --- Background (matte reflective floor) ---
   const ground = BABYLON.MeshBuilder.CreateGround(
     'ground',
     { width: fieldWidth, height: fieldHeight },
@@ -139,9 +139,9 @@ export function startGame(
   );
   const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
   groundMat.diffuseColor = new BABYLON.Color3(0.05, 0.05, 0.1);
+  groundMat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.04);
   ground.material = groundMat;
 
-  // --- Paddles (glowing block look) ---
   function buildGlowingBlockPaddle(base: BABYLON.AbstractMesh, color: BABYLON.Color3) {
     // Base is just a transform holder for physics and positioning
     base.isVisible = false;
@@ -207,6 +207,14 @@ export function startGame(
   ballMat.emissiveColor = new BABYLON.Color3(1.0, 0.3, 0.3);
   const ball = BABYLON.MeshBuilder.CreateSphere('ball', { diameter: ballSize }, scene);
   ball.material = ballMat;
+
+  const mirror = new BABYLON.MirrorTexture('mirror', 256, scene, true);
+  mirror.mirrorPlane = new BABYLON.Plane(0, -1, 0, 0); // reflect across y = 0 plane
+  mirror.level = 0.22; // low intensity for subtle, matte reflection
+  mirror.renderList = [paddleLeft, paddleRight, ball];
+  groundMat.reflectionTexture = mirror;
+  groundMat.reflectionFresnelParameters = new BABYLON.FresnelParameters();
+  groundMat.reflectionFresnelParameters.bias = 0.25;
 
   /** GAME STATE **/
   let leftScore = 0;
