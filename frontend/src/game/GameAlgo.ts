@@ -308,15 +308,17 @@ export function startGame(
     return finalY;
   }
 
-  /** ---- AI (simulated keyboard input, refreshed once per second) ----
+  /** ---- AI (direct paddle control, refreshed once per second) ----
    * Strategy:
    *  - Every aiViewInterval (1000ms) the AI samples ball & predicts intersection Y.
    *  - Adds an error offset (stochastic) based on difficulty.
-   *  - Decides whether to press ArrowUp or ArrowDown (or do nothing).
-   *  - Simulates `keydown` for arrow key, then schedules `keyup` after a computed duration
-   *    based on distance and paddle speed (so movement looks natural).
+   *  - Directly sets the right paddle velocity instead of simulating keyboard input.
    */
   let aiTimer: number | null = null;
+  let aiTargetY: number | null = null;
+  let aiMoveDuration = 0;
+  let aiMoveStartTime = 0;
+
   function startAIController() {
     // Start AI controller for both singleplayer and profile-singleplayer modes
     if (!isAIMatch) return;
@@ -343,29 +345,17 @@ export function startGame(
 
       // If the ball is not moving toward AI or delta is tiny, hold center
       if (Math.abs(delta) <= tolerance) {
-        // do nothing (no key)
+        aiTargetY = null;
         return;
       }
 
-      const keyToPress = delta > 0 ? 'ArrowUp' : 'ArrowDown';
-
-      // compute duration to press key so paddle moves roughly the required distance
+      // Set AI movement parameters
+      aiTargetY = targetY;
       const distance = Math.abs(delta);
       const framesNeeded = distance / Math.max(0.0001, PADDLE_SPEED);
-      let durationMs = framesNeeded * (1000 / 60) * aiHoldScale;
-
-      // Bound duration so it doesn't press absurdly long
-      durationMs = Math.max(80, Math.min(durationMs, aiViewInterval - 50));
-
-      // Simulate keydown
-      const kd = new KeyboardEvent('keydown', { key: keyToPress });
-      document.dispatchEvent(kd);
-
-      // Schedule keyup after durationMs
-      setTimeout(() => {
-        const ku = new KeyboardEvent('keyup', { key: keyToPress });
-        document.dispatchEvent(ku);
-      }, durationMs);
+      aiMoveDuration = framesNeeded * (1000 / 60) * aiHoldScale;
+      aiMoveDuration = Math.max(80, Math.min(aiMoveDuration, aiViewInterval - 50));
+      aiMoveStartTime = Date.now();
     }, aiViewInterval);
   }
 
@@ -385,7 +375,18 @@ export function startGame(
     left.y += left.dy;
     left.y = Math.max(-fieldHeight / 2 + 7, Math.min(fieldHeight / 2 - 7, left.y));
 
-    // right paddle movement: respond to right.dy set by keyboard handlers (or AI key simulation)
+    // Right paddle: AI control if AI match, otherwise keyboard control
+    if (isAIMatch && aiTargetY !== null) {
+      const elapsed = Date.now() - aiMoveStartTime;
+      if (elapsed < aiMoveDuration) {
+        const delta = aiTargetY - right.y;
+        right.dy = delta > 0 ? PADDLE_SPEED : -PADDLE_SPEED;
+      } else {
+        right.dy = 0;
+        aiTargetY = null;
+      }
+    }
+    
     right.y += right.dy;
     right.y = Math.max(-fieldHeight / 2 + 7, Math.min(fieldHeight / 2 - 7, right.y));
 
@@ -436,24 +437,27 @@ export function startGame(
     requestAnimationFrame(loop);
   }
 
-  // Controls — accept arrow keys regardless of mode so AI keyboard simulation works.
+  // Controls — disable arrow keys when playing against AI
   document.addEventListener('keydown', (e) => {
     keys[e.key] = true;
     if (keys['w']) left.dy = PADDLE_SPEED;
     if (keys['s']) left.dy = -PADDLE_SPEED;
 
-    // Accept Arrow keys for second player or AI
-    if (keys['ArrowUp']) right.dy = PADDLE_SPEED;
-    if (keys['ArrowDown']) right.dy = -PADDLE_SPEED;
+    // Only accept Arrow keys if NOT playing against AI
+    if (!isAIMatch) {
+      if (keys['ArrowUp']) right.dy = PADDLE_SPEED;
+      if (keys['ArrowDown']) right.dy = -PADDLE_SPEED;
+    }
   });
 
   document.addEventListener('keyup', (e) => {
     keys[e.key] = false;
     if (!keys['w'] && !keys['s']) left.dy = 0;
 
-    // stop right paddle when arrow keys are released
-    if (!keys['ArrowUp'] && !keys['ArrowDown']) right.dy = 0;
-    // if both pressed, keep whichever is still true (handled above)
+    // Only handle arrow key releases if NOT playing against AI
+    if (!isAIMatch) {
+      if (!keys['ArrowUp'] && !keys['ArrowDown']) right.dy = 0;
+    }
   });
 
   // kick off AI controller if this is an AI match

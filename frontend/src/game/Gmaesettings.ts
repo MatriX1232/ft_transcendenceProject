@@ -1,7 +1,18 @@
+import GameSettingsTranslations from '../languages/GameSettingsLanguages';
+
+const GAME_SETTINGS_DEFAULT_LANG = 'eng';
+
 /** 🔧 Create and manage in-page Game Settings modal */
 export function openGameSettingsModal(mode: string) {
   // Prevent duplicate modals
   if (document.getElementById('game-settings-modal')) return;
+
+  const currentLang = (localStorage.getItem('lang') || GAME_SETTINGS_DEFAULT_LANG) as keyof typeof GameSettingsTranslations;
+  const fallbackPack = GameSettingsTranslations[GAME_SETTINGS_DEFAULT_LANG];
+  const t = (key: keyof typeof GameSettingsTranslations['eng']) => {
+    const langPack = GameSettingsTranslations[currentLang] || fallbackPack;
+    return langPack[key] || fallbackPack[key];
+  };
 
   /** Load existing settings (if any) */
   const saved = localStorage.getItem(`settings_${mode}`);
@@ -22,25 +33,25 @@ export function openGameSettingsModal(mode: string) {
 
   modal.innerHTML = `
     <div class="bg-gradient-to-br from-purple-800 via-black to-blue-900 text-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-fadeIn">
-      <h2 class="text-3xl font-bold mb-6 text-center">⚙️ Game Settings</h2>
+      <h2 class="text-3xl font-bold mb-6 text-center">⚙️ ${t('title')}</h2>
 
       <form id="settingsForm" class="space-y-5">
 
         <div>
-          <label class="block text-lg mb-2"> Win Score</label>
+          <label class="block text-lg mb-2">${t('winScoreLabel')}</label>
           <input type="number" id="winScore" value="${currentSettings.winScore}" min="1"
             class="w-full p-2 rounded-lg text-black" />
         </div>
 
         <div>
-          <label class="block text-lg mb-2"> Ball Speed</label>
+          <label class="block text-lg mb-2">${t('ballSpeedLabel')}</label>
           <input type="range" id="ballSpeed" min="0.5" max="2.0" step="0.1"
             value="${currentSettings.ballSpeed}" class="w-full accent-cyan-400" />
           <p id="ballSpeedValue" class="text-center text-sm mt-1 text-gray-300">${currentSettings.ballSpeed}</p>
         </div>
 
         <div>
-          <label class="block text-lg mb-2"> Paddle Speed</label>
+          <label class="block text-lg mb-2">${t('paddleSpeedLabel')}</label>
           <input type="range" id="paddleSpeed" min="3" max="10" step="0.5"
             value="${currentSettings.paddleSpeed}" class="w-full accent-cyan-400" />
           <p id="paddleSpeedValue" class="text-center text-sm mt-1 text-gray-300">${currentSettings.paddleSpeed}</p>
@@ -48,10 +59,10 @@ export function openGameSettingsModal(mode: string) {
 
         <div class="flex justify-end space-x-3 pt-4">
           <button type="button" id="cancelSettings" class="px-5 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">
-            Cancel
+            ${t('cancelButton')}
           </button>
           <button type="submit" class="px-5 py-2 rounded-lg bg-purple-700 hover:bg-purple-800 transition">
-            OK
+            ${t('confirmButton')}
           </button>
         </div>
       </form>

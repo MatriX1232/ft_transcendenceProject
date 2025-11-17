@@ -1,18 +1,19 @@
 // src/game/OpponentSettingsPage.ts
 import { renderGamePage } from '../../../game/GamePage';
 import { openGameSettingsModal } from '../../../game/Gmaesettings';
-import Rgtranslations from '../../../languages/RegistrationLanguages';
+import SingleModeTranslations from '../../../languages/SingleModeLanguages';
 
-const currentLang: string | null = localStorage.getItem('lang');
+const SINGLE_MODE_DEFAULT_LANG = 'eng';
 
 export function renderOpponentSettingsPage() {
   const app = document.getElementById('app');
   if (!app) return;
 
   // ----------------- Helpers -----------------
-  function t(key: keyof typeof Rgtranslations["eng"]): string {
-    const lang = (currentLang as keyof typeof Rgtranslations) || 'eng';
-    return Rgtranslations[lang]?.[key] || Rgtranslations['eng'][key];
+  function tSingle(key: keyof typeof SingleModeTranslations['eng']): string {
+    const lang = (localStorage.getItem('lang') as keyof typeof SingleModeTranslations) || SINGLE_MODE_DEFAULT_LANG;
+    const pack = SingleModeTranslations[lang] || SingleModeTranslations[SINGLE_MODE_DEFAULT_LANG];
+    return pack[key] || SingleModeTranslations[SINGLE_MODE_DEFAULT_LANG][key];
   }
 
   // ----------------- AI Alias (same as profile mode) -----------------
@@ -38,23 +39,23 @@ export function renderOpponentSettingsPage() {
         <!-- Title -->
         <h1 class="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r 
                    from-purple-400 via-pink-400 to-cyan-400 mb-3">
-          1 VS 1 Mode
+          ${tSingle('title')}
         </h1>
         <p class="text-gray-300 text-sm sm:text-base mb-8">
-          Prepare to face
+          ${tSingle('subtitle')}
         </p>
 
         <!-- Difficulty Selection -->
         <div class="mb-8">
           <label for="difficulty" class="block text-lg font-medium text-cyan-300 mb-2">
-            Choose Difficulty
+            ${tSingle('difficultyLabel')}
           </label>
           <select id="difficulty" 
                   class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-5 py-3 text-white text-lg
                          focus:outline-none focus:ring-2 focus:ring-cyan-400 transition">
-            <option value="easy">🟢 Easy</option>
-            <option value="medium" selected>🟡 Medium</option>
-            <option value="hard">🔴 Hard</option>
+            <option value="easy">${tSingle('easyOption')}</option>
+            <option value="medium" selected>${tSingle('mediumOption')}</option>
+            <option value="hard">${tSingle('hardOption')}</option>
           </select>
         </div>
 
@@ -62,7 +63,7 @@ export function renderOpponentSettingsPage() {
         <button id="settingsbtn"
                 class="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold 
                        text-lg shadow-lg hover:scale-105 hover:shadow-purple-400/50 transition-all mb-8">
-          ⚙️ ${t('settings')}
+          ⚙️ ${tSingle('settingsButton')}
         </button>
 
         <!-- Action Buttons -->
@@ -70,13 +71,13 @@ export function renderOpponentSettingsPage() {
           <button id="startMatchBtn"
                   class="flex-1 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-semibold text-lg 
                          shadow-md hover:scale-105 hover:shadow-cyan-400/60 transition-all">
-            ▶ Start Match
+            ▶ ${tSingle('startButton')}
           </button>
 
           <button id="cancelBtn"
                   class="flex-1 py-3 bg-gradient-to-r from-gray-700 to-gray-800 rounded-xl font-semibold text-lg 
                          shadow-md hover:scale-105 hover:shadow-red-400/40 transition-all">
-            ✖ Cancel
+            ✖ ${tSingle('cancelButton')}
           </button>
         </div>
       </div>
@@ -86,7 +87,7 @@ export function renderOpponentSettingsPage() {
               class="absolute top-5 left-5 px-5 py-2 bg-black/40 backdrop-blur-md rounded-xl border border-pink-500/40
                      hover:border-pink-400 hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] transition-all duration-300
                      text-white font-medium text-base sm:text-lg z-20">
-        🏠 Home
+        🏠 ${tSingle('homeButton')}
       </button>
     </div>
   `;
