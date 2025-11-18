@@ -7,7 +7,7 @@ import { renderOpponentSettingsPage } from './Modes/GuestMode/singleMode/singleP
 import { renderLoginPage } from './pages/LoginPage';
 import { renderDashboardPage } from './pages/DashboardPage';
 import { renderProfileGamePage } from './pages/ProfileGamePage';
-
+import {twoplayersModerender} from './Modes/GuestMode/1vs1/twoPlayersMode'
 export function initRouter() {
   const app = document.getElementById('app');
   if (!app) return;
@@ -56,7 +56,12 @@ function render(path: string) {
     }
     else 
        renderOpponentSettingsPage();
-  } else if (path === '/') {
+  } 
+  else if (path ==="/twoplayersmode"){
+           twoplayersModerender();
+  }
+
+  else if (path === '/') {
     renderLandingPage();
   } else {
     NotFoundPage();

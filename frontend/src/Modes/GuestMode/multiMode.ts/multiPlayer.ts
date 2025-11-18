@@ -1,3 +1,7 @@
+// mode 
+//
+// multi
+//
 import Rgtranslations from '../../../languages/RegistrationLanguages';
 import { renderGamePage } from '../../../game/GamePage';
 import { openGameSettingsModal } from '../../../game/Gmaesettings';

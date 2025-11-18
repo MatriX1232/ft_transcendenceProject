@@ -1,3 +1,8 @@
+// mode 
+//
+// profile-singleplayer
+//
+
 import ProfileTranslations from '../languages/ProfileLanguages';
 
 // Same AI alias pool as guest mode
@@ -16,7 +21,7 @@ export async function renderProfileGamePage() {
 
   const user = JSON.parse(userStr);
   
-  // Translation helper
+ 
   const currentLang = localStorage.getItem('lang') || 'eng';
   function t(key: keyof typeof ProfileTranslations['eng']): string {
     return ProfileTranslations[currentLang as keyof typeof ProfileTranslations]?.[key] || ProfileTranslations['eng'][key];

@@ -41,7 +41,8 @@ export function GuestPage() {
         <span class="text-white group-hover:text-purple-300 transition">${t('singlePlayer')}</span>
       </button>
 
-      <button id="multiMode"
+      
+      <button id="twoplayersMode"
         class="relative group w-4/5 sm:w-auto px-8 sm:px-12 md:px-16 py-6 sm:py-8 md:py-10 text-2xl sm:text-3xl md:text-4xl font-bold rounded-2xl bg-black/40 backdrop-blur-lg border border-blue-500/40 
                shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_40px_rgba(59,130,246,0.8)]
                hover:border-blue-400 transition-all duration-300 ease-out hover:scale-105">
@@ -49,6 +50,13 @@ export function GuestPage() {
       </button>
     </div>
 
+    
+      <button id="multiMode"
+        class="relative mt-4 group w-4/5 sm:w-auto px-8 sm:px-12 md:px-16 py-6 sm:py-8 md:py-10 text-2xl sm:text-3xl md:text-4xl font-bold rounded-2xl bg-black/40 backdrop-blur-lg border border-blue-500/40 
+               shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_40px_rgba(59,130,246,0.8)]
+               hover:border-blue-400 transition-all duration-300 ease-out hover:scale-105">
+        <span class="text-white group-hover:text-blue-300 transition">${t('tournament')}</span>
+      </button>
     <!-- Footer Glow -->
     <div class="absolute bottom-0 w-full h-40 bg-gradient-to-t from-purple-900/60 via-transparent to-transparent blur-2xl"></div>
   </div>
@@ -80,6 +88,14 @@ export function GuestPage() {
     history.pushState({}, '', '/multimode');
     window.dispatchEvent(new PopStateEvent('popstate'));
   });
+
+  document.getElementById('twoplayersMode')?.addEventListener('click', () => {
+    sessionStorage.setItem('canAccessGame', 'true');
+    history.pushState({}, '', '/twoplayersmode');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+
+ 
 
   //  Home button logic
   document.getElementById('homeButton')?.addEventListener('click', () => {

@@ -1,5 +1,5 @@
 import ProfileTranslations from '../languages/ProfileLanguages';
-
+localStorage
 const API_URL = 'http://localhost:3103';
 const DEFAULT_AVATAR_PATH = '/avatars/user.png';
 
@@ -59,7 +59,6 @@ export async function renderDashboardPage() {
   const updateLocalUser = () => {
     if(isLogIn){
        localStorage.setItem('user', JSON.stringify(user));
-      console.error("zahia");
     }
    
   };

@@ -9,6 +9,7 @@ const ProfileTranslations = {
     hardAI: "🔴 Hard AI",
     settings: "Settings",
     startMatch: "Start Match",
+    replay: "Replay",
     cancel: "Cancel",
     home: "Home",
     
@@ -117,6 +118,7 @@ const ProfileTranslations = {
     hardAI: "🔴 IA Difficile",
     settings: "Paramètres",
     startMatch: "Commencer le match",
+    replay: "Rejouer",
     cancel: "Annuler",
     home: "Accueil",
     
@@ -225,6 +227,7 @@ const ProfileTranslations = {
     hardAI: "🔴 Trudna AI",
     settings: "Ustawienia",
     startMatch: "Rozpocznij mecz",
+    replay: "Powtórz",
     cancel: "Anuluj",
     home: "Strona główna",
     
@@ -302,7 +305,7 @@ const ProfileTranslations = {
     passwordRequirements: "Minimum 8 znaków. Unikaj ponownego używania poprzednich haseł.",
     passwordTooShort: "Hasło musi mieć co najmniej 8 znaków.",
     passwordMismatch: "Nowe hasła nie są identyczne.",
-   passwordCurrentRequired: "Wpisz aktualne hasło.",
+    passwordCurrentRequired: "Wpisz aktualne hasło.",
     passwordChangeSuccess: "Hasło zaktualizowane.",
     passwordChangeError: "Nie udało się zaktualizować hasła.",
     statusOnline: "Online",
@@ -333,6 +336,7 @@ const ProfileTranslations = {
     hardAI: "🔴 IA Difícil",
     settings: "Configuración",
     startMatch: "Comenzar partida",
+    replay: "Repetir",
     cancel: "Cancelar",
     home: "Inicio",
     
