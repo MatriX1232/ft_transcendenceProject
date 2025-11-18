@@ -376,7 +376,7 @@ export function renderLoginPage() {
               ${verificationData.secret || t('missingSecretKey')}
             </div>
           </div>
-          <div class="mb-4">
+          <div id="totpInputWrapper" class="mb-4">
             <label class="text-xs text-cyan-200 block mb-2">${t('totpCodeLabel')}</label>
             <input id="totpCodeInput" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]*" placeholder="${t('twoFACodePlaceholder')}"
                    class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none" />
@@ -456,6 +456,8 @@ export function renderLoginPage() {
         if (qrWrapper) qrWrapper.remove();
         const secretWrapper = document.getElementById('totpSecretWrapper');
         if (secretWrapper) secretWrapper.remove();
+        const totpInputWrapper = document.getElementById('totpInputWrapper');
+        if (totpInputWrapper) totpInputWrapper.remove();
         buttonsDiv.innerHTML = `
           <button id="proceedToLoginBtn" class="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl font-bold">${t('proceedToLogin')}</button>
         `;
@@ -469,61 +471,6 @@ export function renderLoginPage() {
       } catch (err) {
         setRegError((err as Error).message);
         throw err;
-      }
-    };
-
-    const attemptAutoLoginAfterRegistration = async (totpCode: string) => {
-      if (!totpCode || !userData.email || !userData.password) {
-        return false;
-      }
-      try {
-        const loginRes = await fetch(`${API_URL}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: userData.email, password: userData.password })
-        });
-        const loginPayload = await loginRes.json().catch(() => ({}));
-        if (!loginRes.ok) {
-          return false;
-        }
-        const loginUser = loginPayload.user || loginPayload;
-        const issuedSession = loginPayload.sessionIssued || loginPayload.success || loginPayload.token;
-        const resolvedUserId = (loginUser && (loginUser.id || loginUser.userId || loginUser.ID)) || userData.email;
-
-        if (issuedSession && loginUser) {
-          localStorage.setItem('user', JSON.stringify(loginUser));
-          localStorage.setItem('userId', String(resolvedUserId));
-          localStorage.setItem('username', loginUser.username || loginUser.display_name || userData.username || '');
-          history.pushState({}, '', '/dashboard');
-          window.dispatchEvent(new PopStateEvent('popstate'));
-          return true;
-        }
-
-        const verifyRes = await fetch(`${API_URL_2FA}/auth/2fa/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ userId: resolvedUserId, code: totpCode })
-        });
-        if (!verifyRes.ok) {
-          return false;
-        }
-        const verifyPayload = await verifyRes.json().catch(() => ({}));
-        const verifiedUser = verifyPayload.user || loginUser;
-        if (verifiedUser) {
-          localStorage.setItem('user', JSON.stringify(verifiedUser));
-          localStorage.setItem('userId', String(verifiedUser.id || resolvedUserId));
-          localStorage.setItem('username', verifiedUser.username || verifiedUser.display_name || userData.username || '');
-        }
-        localStorage.setItem('mode', 'profile-singleplayer');
-        localStorage.setItem('waazabi', 'true');
-        modal.remove();
-        history.pushState({}, '', '/dashboard');
-        window.dispatchEvent(new PopStateEvent('popstate'));
-        return true;
-      } catch (err) {
-        console.warn('Auto login after registration failed', err);
-        return false;
       }
     };
 
@@ -562,7 +509,6 @@ export function renderLoginPage() {
           const finalVerificationData = await res.json();
           completeBtn.textContent = t('completingText');
           await handleFinalRegistration(finalVerificationData);
-          await attemptAutoLoginAfterRegistration(code);
         } catch (err) {
           completeBtn.textContent = t('completeRegistration');
           completeBtn.disabled = false;
