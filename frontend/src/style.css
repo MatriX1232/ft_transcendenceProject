@@ -87,7 +87,7 @@ body {
 
 .game-scoreboard-name {
   margin-top: 0.2rem;
-  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.08em;
   background: linear-gradient(90deg, #22d3ee, #a855f7);
