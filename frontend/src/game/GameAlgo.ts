@@ -13,20 +13,38 @@ export function startGame(
   const canvas = document.getElementById('pong') as HTMLCanvasElement;
   if (!canvas) return;
 
+  // === RESPONSIVE CANVAS SETUP ===
+  const container = canvas.parentElement;
+  const maxWidth = 800;
+  const aspectRatio = 4 / 3; // 640:480 ratio
+
+  function resizeCanvas() {
+    if (!container) return;
+    
+    const containerWidth = container.clientWidth;
+    const targetWidth = Math.min(containerWidth * 0.95, maxWidth);
+    const targetHeight = targetWidth / aspectRatio;
+
+    canvas.style.width = `${targetWidth}px`;
+    canvas.style.height = `${targetHeight}px`;
+    canvas.style.display = 'block';
+    canvas.style.margin = '0 auto';
+  }
+
+  // Initial resize (before engine is created)
+  resizeCanvas();
+
   // Load mode and AI settings
   const opponentSettings = JSON.parse(localStorage.getItem('opponent_settings') || '{}');
   const mode = localStorage.getItem('mode') || 'multi';
   const aiLevel = opponentSettings.aiLevel || 'medium';
 
-  // Check if this is an AI match (either singleplayer or profile-singleplayer)
   const isAIMatch = mode === 'singleplayer' || mode === 'profile-singleplayer';
 
-  // --- Configure AI difficulty (used for error & aggressiveness) ---
-  // These values influence prediction noise, chance to miss and hold time scaling.
-  let aiErrorFactor = 0.15;   // higher = more error (in world units)
-  let aiMissChance = 0.12;    // probability to intentionally "miss" (0..1)
-  let aiViewInterval = 1000;  // ms: how often AI re-computes (must be 1000 ms per spec)
-  let aiHoldScale = 1.0;      // scales how long keys are held (lower -> shorter presses)
+  let aiErrorFactor = 0.15;
+  let aiMissChance = 0.12;
+  let aiViewInterval = 1000;
+  let aiHoldScale = 1.0;
   switch (aiLevel) {
     case 'easy':
       aiErrorFactor = 0.6;
@@ -45,12 +63,27 @@ export function startGame(
       break;
   }
 
-  const engine = new BABYLON.Engine(canvas, true);
+  const engine = new BABYLON.Engine(canvas, true, { 
+    preserveDrawingBuffer: true, 
+    stencil: true,
+    antialias: true 
+  });
+  
   const scene = new BABYLON.Scene(engine);
+  
+  // Camera setup with proper FOV for consistent view
   const camera = new BABYLON.FreeCamera('camera', new BABYLON.Vector3(0, 0, -100), scene);
   camera.setTarget(BABYLON.Vector3.Zero());
+  camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+  
+  // Set orthographic bounds to match game field
+  const orthoSize = 35;
+  camera.orthoLeft = -orthoSize * (canvas.width / canvas.height);
+  camera.orthoRight = orthoSize * (canvas.width / canvas.height);
+  camera.orthoTop = orthoSize;
+  camera.orthoBottom = -orthoSize;
+
   new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
-  // Add a subtle glow bloom to make emissive materials pop
   const glow = new BABYLON.GlowLayer('glow', scene, { blurKernelSize: 48 });
   glow.intensity = 0.55;
 
@@ -131,7 +164,6 @@ export function startGame(
 
   mountScoreboard();
 
-  // --- Background (matte reflective floor) ---
   const ground = BABYLON.MeshBuilder.CreateGround(
     'ground',
     { width: fieldWidth, height: fieldHeight },
@@ -143,13 +175,11 @@ export function startGame(
   ground.material = groundMat;
 
   function buildGlowingBlockPaddle(base: BABYLON.AbstractMesh, color: BABYLON.Color3) {
-    // Base is just a transform holder for physics and positioning
     base.isVisible = false;
 
     const holder = new BABYLON.TransformNode(base.name + '-block-holder', scene);
     holder.parent = base;
 
-    // Outer translucent shell to create a soft volumetric glow
     const shell = BABYLON.MeshBuilder.CreateBox(base.name + '-shell', {
       width: paddleSize.width,
       height: paddleSize.height,
@@ -164,7 +194,6 @@ export function startGame(
     shellMat.alpha = 0.42;
     shell.material = shellMat;
 
-    // Inner bright core block that actually glows
     const core = BABYLON.MeshBuilder.CreateBox(base.name + '-core', {
       width: paddleSize.width * 0.72,
       height: paddleSize.height * 0.92,
@@ -176,13 +205,11 @@ export function startGame(
     coreMat.diffuseColor = color.scale(0.08);
     coreMat.emissiveColor = color.clone();
     coreMat.specularColor = new BABYLON.Color3(1, 1, 1);
-    // Rim emphasis to enhance 3D
     coreMat.emissiveFresnelParameters = new BABYLON.FresnelParameters();
     coreMat.emissiveFresnelParameters.bias = 0.18;
     coreMat.emissiveFresnelParameters.power = 2.0;
     core.material = coreMat;
 
-    // Gentle pulsating emissive to make it feel alive
     const phase = Math.random() * Math.PI * 2;
     scene.onBeforeRenderObservable.add(() => {
       const t = performance.now() * 0.001;
@@ -192,31 +219,27 @@ export function startGame(
     });
   }
 
-  // Base meshes (drivers for position) keep original dimensions for gameplay
   const paddleLeft = BABYLON.MeshBuilder.CreateBox('paddleLeft', paddleSize, scene);
   paddleLeft.position.x = -fieldWidth / 2 + 5;
   const paddleRight = BABYLON.MeshBuilder.CreateBox('paddleRight', paddleSize, scene);
   paddleRight.position.x = fieldWidth / 2 - 5;
 
-  // Build glowing block visuals on both paddles
   buildGlowingBlockPaddle(paddleLeft, new BABYLON.Color3(0.2, 0.95, 1.0));
   buildGlowingBlockPaddle(paddleRight, new BABYLON.Color3(0.7, 0.3, 1.0));
 
-  // --- Ball ---
   const ballMat = new BABYLON.StandardMaterial('ballMat', scene);
   ballMat.emissiveColor = new BABYLON.Color3(1.0, 0.3, 0.3);
   const ball = BABYLON.MeshBuilder.CreateSphere('ball', { diameter: ballSize }, scene);
   ball.material = ballMat;
 
   const mirror = new BABYLON.MirrorTexture('mirror', 256, scene, true);
-  mirror.mirrorPlane = new BABYLON.Plane(0, -1, 0, 0); // reflect across y = 0 plane
-  mirror.level = 0.22; // low intensity for subtle, matte reflection
+  mirror.mirrorPlane = new BABYLON.Plane(0, -1, 0, 0);
+  mirror.level = 0.22;
   mirror.renderList = [paddleLeft, paddleRight, ball];
   groundMat.reflectionTexture = mirror;
   groundMat.reflectionFresnelParameters = new BABYLON.FresnelParameters();
   groundMat.reflectionFresnelParameters.bias = 0.25;
 
-  /** GAME STATE **/
   let leftScore = 0;
   let rightScore = 0;
   let gameOver = false;
@@ -274,82 +297,57 @@ export function startGame(
     }
   }
 
-  /** Predict where ball will intersect at x = targetX accounting for vertical bounces.
-   *  Uses continuous linear motion + reflection math (no A*).
-   */
   function predictBallYAtX(targetX: number) {
-    // If dx is zero -> can't predict, return center
     if (ballObj.dx === 0) return 0;
 
     const dirToTarget = Math.sign(targetX - ballObj.x);
     const ballMovingTowardsTarget = Math.sign(ballObj.dx) === dirToTarget;
 
-    // If ball is moving away from AI, predict center (or anticipate next approach by waiting)
     if (!ballMovingTowardsTarget) {
-      return 0; // center fallback; AI will not be perfect here
+      return 0;
     }
 
-    // time to reach targetX (in "frames" units same as dx/dy per frame)
-    const t = (targetX - ballObj.x) / ballObj.dx; // can be fractional
-
-    // projected Y without considering walls:
+    const t = (targetX - ballObj.x) / ballObj.dx;
     let projY = ballObj.y + ballObj.dy * t;
 
-    // reflect projY into allowed range [-H/2, H/2] using mirror reflection
     const H = fieldHeight;
     const top = H / 2;
-    // shift to [0, H] range by adding top
     let shifted = projY + top;
     const period = 2 * H;
-    // proper positive modulo
     shifted = ((shifted % period) + period) % period;
     if (shifted > H) shifted = 2 * H - shifted;
     const finalY = shifted - top;
     return finalY;
   }
 
-  /** ---- AI (direct paddle control, refreshed once per second) ----
-   * Strategy:
-   *  - Every aiViewInterval (1000ms) the AI samples ball & predicts intersection Y.
-   *  - Adds an error offset (stochastic) based on difficulty.
-   *  - Directly sets the right paddle velocity instead of simulating keyboard input.
-   */
   let aiTimer: number | null = null;
   let aiTargetY: number | null = null;
   let aiMoveDuration = 0;
   let aiMoveStartTime = 0;
 
   function startAIController() {
-    // Start AI controller for both singleplayer and profile-singleplayer modes
     if (!isAIMatch) return;
 
     aiTimer = window.setInterval(() => {
       if (gameOver) return;
-      // Predict intersection at the AI's x
       const aiX = right.x;
       let targetY = predictBallYAtX(aiX);
 
-      // Add error/noise (difficulty-based)
       const error = (Math.random() * 2 - 1) * (aiErrorFactor * fieldHeight / 10);
       targetY += error;
 
-      // With some probability, intentionally miss (simulate human mistakes)
       if (Math.random() < aiMissChance) {
-        // push target off by a bigger offset
         targetY += (Math.random() > 0.5 ? 1 : -1) * (0.2 * fieldHeight);
       }
 
-      // Decide direction: ArrowUp increases y, ArrowDown decreases y
       const delta = targetY - right.y;
-      const tolerance = 1.2; // small deadzone so AI won't jitter
+      const tolerance = 1.2;
 
-      // If the ball is not moving toward AI or delta is tiny, hold center
       if (Math.abs(delta) <= tolerance) {
         aiTargetY = null;
         return;
       }
 
-      // Set AI movement parameters
       aiTargetY = targetY;
       const distance = Math.abs(delta);
       const framesNeeded = distance / Math.max(0.0001, PADDLE_SPEED);
@@ -359,7 +357,6 @@ export function startGame(
     }, aiViewInterval);
   }
 
-  // Stop AI controller (cleanup)
   function stopAIController() {
     if (aiTimer != null) {
       clearInterval(aiTimer);
@@ -367,15 +364,12 @@ export function startGame(
     }
   }
 
-  /** 🔁 Game Loop */
   function update() {
     if (gameOver) return;
 
-    // Player control (always left)
     left.y += left.dy;
     left.y = Math.max(-fieldHeight / 2 + 7, Math.min(fieldHeight / 2 - 7, left.y));
 
-    // Right paddle: AI control if AI match, otherwise keyboard control
     if (isAIMatch && aiTargetY !== null) {
       const elapsed = Date.now() - aiMoveStartTime;
       if (elapsed < aiMoveDuration) {
@@ -393,7 +387,6 @@ export function startGame(
     left.mesh.position.y = left.y;
     right.mesh.position.y = right.y;
 
-    // Ball physics
     ballObj.x += ballObj.dx;
     ballObj.y += ballObj.dy;
     ball.position.x = ballObj.x;
@@ -404,7 +397,6 @@ export function startGame(
     checkPaddleCollision(left, true);
     checkPaddleCollision(right, false);
 
-    // Scoring
     if (ballObj.x < -fieldWidth / 2) {
       rightScore++;
       updateScoreText();
@@ -437,13 +429,11 @@ export function startGame(
     requestAnimationFrame(loop);
   }
 
-  // Controls — disable arrow keys when playing against AI
   document.addEventListener('keydown', (e) => {
     keys[e.key] = true;
     if (keys['w']) left.dy = PADDLE_SPEED;
     if (keys['s']) left.dy = -PADDLE_SPEED;
 
-    // Only accept Arrow keys if NOT playing against AI
     if (!isAIMatch) {
       if (keys['ArrowUp']) right.dy = PADDLE_SPEED;
       if (keys['ArrowDown']) right.dy = -PADDLE_SPEED;
@@ -454,24 +444,29 @@ export function startGame(
     keys[e.key] = false;
     if (!keys['w'] && !keys['s']) left.dy = 0;
 
-    // Only handle arrow key releases if NOT playing against AI
     if (!isAIMatch) {
       if (!keys['ArrowUp'] && !keys['ArrowDown']) right.dy = 0;
     }
   });
 
-  // kick off AI controller if this is an AI match
   if (isAIMatch) {
     startAIController();
   }
 
-  // Start
   updateScoreText();
   resetBall();
   loop();
-  window.addEventListener('resize', () => engine.resize());
+  
+  // Use engine.resize() for BabylonJS responsive handling
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    engine.resize();
+    // Update orthographic camera bounds on resize
+    const aspectRatio = canvas.width / canvas.height;
+    camera.orthoLeft = -orthoSize * aspectRatio;
+    camera.orthoRight = orthoSize * aspectRatio;
+  });
 
-  // Clean-up when page/app is unloaded (prevent intervals leaking)
   window.addEventListener(
     'beforeunload',
     () => {
