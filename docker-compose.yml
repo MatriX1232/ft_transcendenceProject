@@ -6,8 +6,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
+    expose:
+      - "5173"
     volumes:
       - ./frontend:/app          # mount local code into container
       - /app/node_modules        # keep node_modules inside container
@@ -25,8 +25,8 @@ services:
     build:
       context: ./microservices/players
       dockerfile: Dockerfile
-    ports:
-      - "3101:3101"
+    expose:
+      - "3101"
     volumes:
       - ./database:/app/database   # DB files persist here
       - ./microservices/players/src:/app/src  # Only source code mounted
@@ -39,8 +39,8 @@ services:
     build:
       context: ./microservices/matches
       dockerfile: Dockerfile
-    ports:
-      - "3102:3102"
+    expose:
+      - "3102"
     volumes:
       - ./database:/app/database
       - ./microservices/matches/src:/app/src
@@ -55,8 +55,8 @@ services:
     build:
       context: ./microservices/users
       dockerfile: Dockerfile
-    ports:
-      - "3103:3103"
+    expose:
+      - "3103"
     volumes:
       - ./database:/app/database
       - ./microservices/users/src:/app/src
@@ -71,8 +71,8 @@ services:
     build:
       context: ./microservices/auth
       dockerfile: Dockerfile
-    ports:
-      - "3105:3105"
+    expose:
+      - "3105"
     volumes:
       - ./database:/app/database
       - ./microservices/auth/src:/app/src
@@ -98,6 +98,24 @@ services:
       - 1.1.1.1
     env_file:
       - ./.env
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    depends_on:
+      - frontend
+      - players-service
+      - matches-service
+      - users-service
+      - auth-service
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+    networks:
+      - transcendence-network
 
 networks:
   transcendence-network:

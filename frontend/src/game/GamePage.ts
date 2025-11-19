@@ -1,6 +1,17 @@
 import { startGame } from './GameAlgo';
 import ProfileTranslations from '../languages/ProfileLanguages';
 
+const DEFAULT_API_ORIGIN = window.location.origin.replace(/\/$/, '');
+const PLAYERS_API_URL =
+  (import.meta.env.VITE_PLAYERS_API_URL as string | undefined) ??
+  DEFAULT_API_ORIGIN;
+const MATCHES_API_URL =
+  (import.meta.env.VITE_MATCHES_API_URL as string | undefined) ??
+  DEFAULT_API_ORIGIN;
+const USERS_API_URL =
+  (import.meta.env.VITE_USERS_API_URL as string | undefined) ??
+  DEFAULT_API_ORIGIN;
+
 /** Types */
 type GameSettings = {
   mode: string;
@@ -11,7 +22,7 @@ type GameSettings = {
 
 /** Fetch players from backend */
 async function getAliasQueue(): Promise<string[]> {
-  const res = await fetch('http://localhost:3101/players');
+  const res = await fetch(`${PLAYERS_API_URL}/players`);
   const data = await res.json();
 
   const queue = Array.isArray(data)
@@ -68,7 +79,7 @@ async function saveMatch(winner: string, p1: string, p2: string) {
   
   console.log('Match data being saved:', matchData);
   
-  const res = await fetch('http://localhost:3102/matches', {
+  const res = await fetch(`${MATCHES_API_URL}/matches`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(matchData),
@@ -88,7 +99,7 @@ async function saveMatch(winner: string, p1: string, p2: string) {
     console.log('Updating stats for user:', user.id, 'won:', won);
     
     // Update user stats
-    const statsRes = await fetch(`http://localhost:3103/users/${user.id}/stats`, {
+    const statsRes = await fetch(`${USERS_API_URL}/users/${user.id}/stats`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

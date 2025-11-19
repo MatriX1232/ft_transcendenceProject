@@ -1,20 +1,14 @@
 import QRCode from 'qrcode';
 import LoginTranslations from '../languages/LoginLanguages';
 
-const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-const DEFAULT_USERS_API_URL = isLocalhost
-  ? 'http://localhost:3103'
-  : window.location.origin.replace(/\/$/, '');
-const DEFAULT_2FA_API_URL = isLocalhost
-  ? 'http://localhost:3105'
-  : window.location.origin.replace(/\/$/, '');
+const DEFAULT_API_ORIGIN = window.location.origin.replace(/\/$/, '');
 
 const API_URL =
   (import.meta.env.VITE_USERS_API_URL as string | undefined) ??
-  DEFAULT_USERS_API_URL;
+  DEFAULT_API_ORIGIN;
 const API_URL_2FA =
   (import.meta.env.VITE_AUTH_API_URL as string | undefined) ??
-  DEFAULT_2FA_API_URL;
+  DEFAULT_API_ORIGIN;
 const LOGIN_DEFAULT_LANG = 'eng';
 
 export function renderLoginPage() {

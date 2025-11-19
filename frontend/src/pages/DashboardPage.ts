@@ -1,19 +1,13 @@
 import ProfileTranslations from '../languages/ProfileLanguages';
 
-const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-const DEFAULT_USERS_API_URL = isLocalhost
-  ? 'http://localhost:3103'
-  : window.location.origin.replace(/\/$/, '');
-const DEFAULT_MATCHES_API_URL = isLocalhost
-  ? 'http://localhost:3102'
-  : window.location.origin.replace(/\/$/, '');
+const DEFAULT_API_ORIGIN = window.location.origin.replace(/\/$/, '');
 
 const API_URL =
   (import.meta.env.VITE_USERS_API_URL as string | undefined) ??
-  DEFAULT_USERS_API_URL;
+  DEFAULT_API_ORIGIN;
 const MATCHES_API_URL =
   (import.meta.env.VITE_MATCHES_API_URL as string | undefined) ??
-  DEFAULT_MATCHES_API_URL;
+  DEFAULT_API_ORIGIN;
 
 const DEFAULT_AVATAR_PATH = '/avatars/user.png';
 
