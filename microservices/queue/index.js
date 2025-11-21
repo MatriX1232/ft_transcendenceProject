@@ -34,5 +34,4 @@ fastify.post('/queue', async (request, reply) => {
 });
 
 fastify.listen({ port: PORT }, () => {
-  console.log(`Queue Service running on http://localhost:${PORT}`);
 });

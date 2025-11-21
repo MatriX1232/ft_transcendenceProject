@@ -1,38 +1,69 @@
 import * as BABYLON from 'babylonjs';
 
 export function startGame(
-  onMatchEnd: (winner: string) => void,
+  onMatchEnd: (winnerId: string, winnerDisplay: string) => void,
   settings: {
     winScore: number;
     ballSpeed: number;
     paddleSpeed: number;
   },
   p1: string,
-  p2: string
+  p2: string,
+  displayNames?: { p1?: string; p2?: string }
 ) {
   const canvas = document.getElementById('pong') as HTMLCanvasElement;
   if (!canvas) return;
 
   // === RESPONSIVE CANVAS SETUP ===
   const container = canvas.parentElement;
-  const maxWidth = 800;
-  const aspectRatio = 4 / 3; // 640:480 ratio
+  const DEFAULT_ASPECT_RATIO = 4 / 3; // 640:480 ratio
+  let engine: BABYLON.Engine;
+  let camera: BABYLON.FreeCamera;
 
-  function resizeCanvas() {
-    if (!container) return;
-    
-    const containerWidth = container.clientWidth;
-    const targetWidth = Math.min(containerWidth * 0.95, maxWidth);
-    const targetHeight = targetWidth / aspectRatio;
+  const computeCanvasSize = () => {
+    const containerWidth = container?.clientWidth || window.innerWidth || 800;
+    const viewportHeight = window.innerHeight || 600;
+    let targetWidth = Math.min(containerWidth * 0.95, 960);
+    let targetHeight = targetWidth / DEFAULT_ASPECT_RATIO;
 
+    // Cap height to avoid overflowing small mobile viewports
+    const maxHeight = viewportHeight * 0.65;
+    if (targetHeight > maxHeight) {
+      targetHeight = maxHeight;
+      targetWidth = targetHeight * DEFAULT_ASPECT_RATIO;
+    }
+
+    return { targetWidth, targetHeight };
+  };
+
+  const updateCameraBounds = () => {
+    if (!camera) return;
+    const aspect = (canvas.width || 1) / (canvas.height || 1);
+    camera.orthoLeft = -orthoSize * aspect;
+    camera.orthoRight = orthoSize * aspect;
+    camera.orthoTop = orthoSize;
+    camera.orthoBottom = -orthoSize;
+  };
+
+  const applyCanvasSize = () => {
+    const { targetWidth, targetHeight } = computeCanvasSize();
+    const dpr = window.devicePixelRatio || 1;
     canvas.style.width = `${targetWidth}px`;
     canvas.style.height = `${targetHeight}px`;
     canvas.style.display = 'block';
     canvas.style.margin = '0 auto';
-  }
+    canvas.width = Math.round(targetWidth * dpr);
+    canvas.height = Math.round(targetHeight * dpr);
 
-  // Initial resize (before engine is created)
-  resizeCanvas();
+    if (engine) {
+      engine.setSize(canvas.width, canvas.height, false);
+      engine.resize();
+      updateCameraBounds();
+    }
+  };
+
+  // Initial sizing (before engine is created)
+  applyCanvasSize();
 
   // Load mode and AI settings
   const opponentSettings = JSON.parse(localStorage.getItem('opponent_settings') || '{}');
@@ -41,29 +72,37 @@ export function startGame(
 
   const isAIMatch = mode === 'singleplayer' || mode === 'profile-singleplayer';
 
+  const AI_PREDICTION_INTERVAL_MS = 1000;
   let aiErrorFactor = 0.15;
   let aiMissChance = 0.12;
-  let aiViewInterval = 1000;
+  let aiViewInterval = AI_PREDICTION_INTERVAL_MS;
   let aiHoldScale = 1.0;
+  let aiPaddleSpeedScale = 1.0;
   switch (aiLevel) {
     case 'easy':
-      aiErrorFactor = 0.6;
-      aiMissChance = 0.35;
-      aiHoldScale = 0.8;
+      aiErrorFactor = 0.8;
+      aiMissChance = 0.5;
+      aiHoldScale = 0.75;
+      aiViewInterval = 1400;
+      aiPaddleSpeedScale = 0.65;
       break;
     case 'medium':
-      aiErrorFactor = 0.25;
-      aiMissChance = 0.18;
+      aiErrorFactor = 0.3;
+      aiMissChance = 0.2;
       aiHoldScale = 1.0;
+      aiViewInterval = 1000;
+      aiPaddleSpeedScale = 1.0;
       break;
     case 'hard':
-      aiErrorFactor = 0.08;
+      aiErrorFactor = 0.05;
       aiMissChance = 0.05;
-      aiHoldScale = 1.15;
+      aiHoldScale = 1.25;
+      aiViewInterval = 650;
+      aiPaddleSpeedScale = 1.4;
       break;
   }
 
-  const engine = new BABYLON.Engine(canvas, true, { 
+  engine = new BABYLON.Engine(canvas, true, { 
     preserveDrawingBuffer: true, 
     stencil: true,
     antialias: true 
@@ -72,29 +111,30 @@ export function startGame(
   const scene = new BABYLON.Scene(engine);
   
   // Camera setup with proper FOV for consistent view
-  const camera = new BABYLON.FreeCamera('camera', new BABYLON.Vector3(0, 0, -100), scene);
+  camera = new BABYLON.FreeCamera('camera', new BABYLON.Vector3(0, 0, -100), scene);
   camera.setTarget(BABYLON.Vector3.Zero());
   camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
   
   // Set orthographic bounds to match game field
   const orthoSize = 35;
-  camera.orthoLeft = -orthoSize * (canvas.width / canvas.height);
-  camera.orthoRight = orthoSize * (canvas.width / canvas.height);
-  camera.orthoTop = orthoSize;
-  camera.orthoBottom = -orthoSize;
+  updateCameraBounds();
 
   new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), scene);
   const glow = new BABYLON.GlowLayer('glow', scene, { blurKernelSize: 48 });
   glow.intensity = 0.55;
 
   const WIN_SCORE = settings.winScore;
-  const BALL_SPEED = settings.ballSpeed;
+  const BALL_SPEED = settings.ballSpeed / 2;
   const PADDLE_SPEED = settings.paddleSpeed;
+  const AI_PADDLE_SPEED = isAIMatch ? PADDLE_SPEED * aiPaddleSpeedScale : PADDLE_SPEED;
 
   const fieldWidth = 100;
   const fieldHeight = 60;
   const paddleSize = { width: 3, height: 14, depth: 2 };
   const ballSize = 4;
+
+  const playerOneName = displayNames?.p1 ?? p1;
+  const playerTwoName = displayNames?.p2 ?? p2;
 
   const scoreboardHost = document.getElementById('app') || document.body;
   let scoreDiv = document.getElementById('scoreDisplay') as HTMLDivElement | null;
@@ -122,7 +162,7 @@ export function startGame(
     leftLabel.textContent = 'Player One';
     const leftName = document.createElement('span');
     leftName.className = 'game-scoreboard-name';
-    leftName.textContent = p1;
+    leftName.textContent = playerOneName;
     leftPlayer.append(leftLabel, leftName);
 
     const scoresGroup = document.createElement('div');
@@ -145,7 +185,7 @@ export function startGame(
     rightLabel.textContent = isAIMatch ? 'AI Opponent' : 'Player Two';
     const rightName = document.createElement('span');
     rightName.className = 'game-scoreboard-name';
-    rightName.textContent = p2;
+    rightName.textContent = playerTwoName;
     rightPlayer.append(rightLabel, rightName);
 
     panel.append(leftPlayer, scoresGroup, rightPlayer);
@@ -255,6 +295,8 @@ export function startGame(
   };
 
   const keys: Record<string, boolean> = {};
+  const clampPaddleY = (value: number) =>
+    Math.max(-fieldHeight / 2 + 7, Math.min(fieldHeight / 2 - 7, value));
 
   function updateScoreText() {
     if (leftScoreValueEl) {
@@ -324,11 +366,18 @@ export function startGame(
   let aiTargetY: number | null = null;
   let aiMoveDuration = 0;
   let aiMoveStartTime = 0;
+  let aiStartY = 0;
+  let lastPredictionTime = 0;
 
   function startAIController() {
     if (!isAIMatch) return;
 
     aiTimer = window.setInterval(() => {
+      const now = Date.now();
+      if (now - lastPredictionTime < aiViewInterval - 5) {
+        return;
+      } // ensures that ai makes predictions at most every interval
+      lastPredictionTime = now;
       if (gameOver) return;
       const aiX = right.x;
       let targetY = predictBallYAtX(aiX);
@@ -349,8 +398,9 @@ export function startGame(
       }
 
       aiTargetY = targetY;
+      aiStartY = right.y;
       const distance = Math.abs(delta);
-      const framesNeeded = distance / Math.max(0.0001, PADDLE_SPEED);
+      const framesNeeded = distance / Math.max(0.0001, AI_PADDLE_SPEED);
       aiMoveDuration = framesNeeded * (1000 / 60) * aiHoldScale;
       aiMoveDuration = Math.max(80, Math.min(aiMoveDuration, aiViewInterval - 50));
       aiMoveStartTime = Date.now();
@@ -368,21 +418,22 @@ export function startGame(
     if (gameOver) return;
 
     left.y += left.dy;
-    left.y = Math.max(-fieldHeight / 2 + 7, Math.min(fieldHeight / 2 - 7, left.y));
+    left.y = clampPaddleY(left.y);
 
     if (isAIMatch && aiTargetY !== null) {
       const elapsed = Date.now() - aiMoveStartTime;
       if (elapsed < aiMoveDuration) {
-        const delta = aiTargetY - right.y;
-        right.dy = delta > 0 ? PADDLE_SPEED : -PADDLE_SPEED;
+        const t = Math.max(0, Math.min(1, elapsed / aiMoveDuration));
+        right.y = clampPaddleY(aiStartY + (aiTargetY - aiStartY) * t);
       } else {
-        right.dy = 0;
+        right.y = clampPaddleY(aiTargetY);
         aiTargetY = null;
       }
+      right.dy = 0;
+    } else {
+      right.y += right.dy;
+      right.y = clampPaddleY(right.y);
     }
-    
-    right.y += right.dy;
-    right.y = Math.max(-fieldHeight / 2 + 7, Math.min(fieldHeight / 2 - 7, right.y));
 
     left.mesh.position.y = left.y;
     right.mesh.position.y = right.y;
@@ -415,11 +466,11 @@ export function startGame(
     if (leftScore >= WIN_SCORE) {
       gameOver = true;
       stopAIController();
-      onMatchEnd(p1);
+      onMatchEnd(p1, playerOneName);
     } else if (rightScore >= WIN_SCORE) {
       gameOver = true;
       stopAIController();
-      onMatchEnd(p2);
+      onMatchEnd(p2, playerTwoName);
     }
   }
 
@@ -449,6 +500,44 @@ export function startGame(
     }
   });
 
+  // Touch/drag controls for mobile
+  canvas.style.touchAction = 'none';
+  function clientToFieldY(clientY: number) {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = (clientY - rect.top) / rect.height;
+    // Invert Y to match on-screen direction (drag up moves paddle up)
+    return clampPaddleY((0.5 - ratio) * fieldHeight);
+  }
+  function applyDragControl(clientX: number, clientY: number) {
+    const rect = canvas.getBoundingClientRect();
+    const leftSide = clientX < rect.left + rect.width / 2;
+    const targetY = clientToFieldY(clientY);
+    if (leftSide) {
+      left.y = targetY;
+      left.dy = 0;
+    } else if (!isAIMatch) {
+      right.y = targetY;
+      right.dy = 0;
+    }
+  }
+  const handleTouch = (evt: TouchEvent) => {
+    evt.preventDefault();
+    for (let i = 0; i < evt.touches.length; i++) {
+      const touch = evt.touches.item(i);
+      if (!touch) continue;
+      applyDragControl(touch.clientX, touch.clientY);
+    }
+  };
+  const handlePointer = (evt: PointerEvent) => {
+    if (evt.pointerType !== 'touch') return;
+    evt.preventDefault();
+    applyDragControl(evt.clientX, evt.clientY);
+  };
+  canvas.addEventListener('touchstart', handleTouch, { passive: false });
+  canvas.addEventListener('touchmove', handleTouch, { passive: false });
+  canvas.addEventListener('pointerdown', handlePointer, { passive: false });
+  canvas.addEventListener('pointermove', handlePointer, { passive: false });
+
   if (isAIMatch) {
     startAIController();
   }
@@ -459,12 +548,7 @@ export function startGame(
   
   // Use engine.resize() for BabylonJS responsive handling
   window.addEventListener('resize', () => {
-    resizeCanvas();
-    engine.resize();
-    // Update orthographic camera bounds on resize
-    const aspectRatio = canvas.width / canvas.height;
-    camera.orthoLeft = -orthoSize * aspectRatio;
-    camera.orthoRight = orthoSize * aspectRatio;
+    applyCanvasSize();
   });
 
   window.addEventListener(

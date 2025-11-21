@@ -131,7 +131,6 @@ const start = async () => {
     });
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
-    console.log(`Matches Service running on http://localhost:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

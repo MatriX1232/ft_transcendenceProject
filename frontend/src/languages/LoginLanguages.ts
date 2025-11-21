@@ -52,7 +52,15 @@ const LoginTranslations = {
     finalRegistrationError: 'Final registration step failed.',
     missingVerificationToken: 'Missing verification token from server.',
     resendSuccessMessage: 'A new code has been sent to your email.',
-    loginInsecureProtocolError: 'Login is only allowed over HTTPS in production. Please use a secure connection.'
+    loginInsecureProtocolError: 'Login is only allowed over HTTPS in production. Please use a secure connection.',
+    passwordRulesTitle: 'Password must include:',
+    passwordRuleLength: 'At least 8 characters',
+    passwordRuleUpper: 'One uppercase letter (A-Z)',
+    passwordRuleLower: 'One lowercase letter (a-z)',
+    passwordRuleNumber: 'One number (0-9)',
+    passwordRuleSpecial: 'One special symbol (!@#$…)',
+    passwordRuleNoSpaces: 'No spaces',
+    passwordRulesNotMet: 'Password does not meet the requirements above.'
   },
   fr: {
     tabLogin: 'Connexion',
@@ -107,7 +115,15 @@ const LoginTranslations = {
     finalRegistrationError: 'La dernière étape d’inscription a échoué.',
     missingVerificationToken: 'Jeton de vérification manquant.',
     resendSuccessMessage: 'Un nouveau code a été envoyé sur votre e-mail.',
-    loginInsecureProtocolError: 'La connexion n’est autorisée que via HTTPS en production. Veuillez utiliser une connexion sécurisée.'
+    loginInsecureProtocolError: 'La connexion n’est autorisée que via HTTPS en production. Veuillez utiliser une connexion sécurisée.',
+    passwordRulesTitle: 'Le mot de passe doit inclure :',
+    passwordRuleLength: 'Au moins 8 caractères',
+    passwordRuleUpper: 'Une lettre majuscule (A-Z)',
+    passwordRuleLower: 'Une lettre minuscule (a-z)',
+    passwordRuleNumber: 'Un chiffre (0-9)',
+    passwordRuleSpecial: 'Un symbole spécial (!@#$…)',
+    passwordRuleNoSpaces: 'Sans espaces',
+    passwordRulesNotMet: 'Le mot de passe ne respecte pas les exigences ci-dessus.'
   },
   pl: {
     tabLogin: 'Zaloguj się',
@@ -162,7 +178,15 @@ const LoginTranslations = {
     finalRegistrationError: 'Ostatni krok rejestracji nie powiódł się.',
     missingVerificationToken: 'Brakuje tokena weryfikacyjnego.',
     resendSuccessMessage: 'Nowy kod został wysłany na Twój e-mail.',
-    loginInsecureProtocolError: 'Logowanie jest dozwolone tylko przez HTTPS w środowisku produkcyjnym. Użyj bezpiecznego połączenia.'
+    loginInsecureProtocolError: 'Logowanie jest dozwolone tylko przez HTTPS w środowisku produkcyjnym. Użyj bezpiecznego połączenia.',
+    passwordRulesTitle: 'Hasło musi zawierać:',
+    passwordRuleLength: 'Co najmniej 8 znaków',
+    passwordRuleUpper: 'Jedną wielką literę (A-Z)',
+    passwordRuleLower: 'Jedną małą literę (a-z)',
+    passwordRuleNumber: 'Jedną cyfrę (0-9)',
+    passwordRuleSpecial: 'Jeden znak specjalny (!@#$…)',
+    passwordRuleNoSpaces: 'Bez spacji',
+    passwordRulesNotMet: 'Hasło nie spełnia powyższych wymagań.'
   },
   es: {
     tabLogin: 'Iniciar sesión',
@@ -217,7 +241,15 @@ const LoginTranslations = {
     finalRegistrationError: 'Falló el paso final del registro.',
     missingVerificationToken: 'Falta el token de verificación.',
     resendSuccessMessage: 'Se envió un nuevo código a tu correo.',
-    loginInsecureProtocolError: 'El inicio de sesión solo está permitido mediante HTTPS en producción. Usa una conexión segura.'
+    loginInsecureProtocolError: 'El inicio de sesión solo está permitido mediante HTTPS en producción. Usa una conexión segura.',
+    passwordRulesTitle: 'La contraseña debe incluir:',
+    passwordRuleLength: 'Al menos 8 caracteres',
+    passwordRuleUpper: 'Una letra mayúscula (A-Z)',
+    passwordRuleLower: 'Una letra minúscula (a-z)',
+    passwordRuleNumber: 'Un número (0-9)',
+    passwordRuleSpecial: 'Un símbolo especial (!@#$…)',
+    passwordRuleNoSpaces: 'Sin espacios',
+    passwordRulesNotMet: 'La contraseña no cumple los requisitos anteriores.'
   }
 } as const;
 

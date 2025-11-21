@@ -89,7 +89,6 @@ fastify.delete('/players', async (_, reply) => {
 const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
-    console.log(`Players Service running on http://0.0.0.0:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

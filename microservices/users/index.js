@@ -9,6 +9,7 @@ import multipart from '@fastify/multipart';
 import { pipeline } from 'stream/promises';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const fastify = Fastify({ logger: true });
 const PORT = process.env.PORT || 3103;
@@ -27,6 +28,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ft_transcendence.clients';
 const JWT_ISSUER = process.env.JWT_ISSUER || 'ft_transcendence.auth';
 const JWT_COOKIE_NAME = process.env.JWT_COOKIE_NAME || 'ft_session';
+const DPO_CONTACT_EMAIL = process.env.DPO_CONTACT_EMAIL || 'privacy@transcendence.local';
 
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET must be defined and at least 32 characters long for users-service.');
@@ -129,7 +131,6 @@ const ensureDefaultAvatar = () => {
 
   try {
     fs.copyFileSync(sourcePath, destination);
-    console.log(`[users-service] Copied default avatar from ${sourcePath}`);
   } catch (err) {
     console.error(`[users-service] Failed to copy default avatar:`, err);
   }
@@ -150,6 +151,55 @@ function buildRateLimitRouteConfig(max = SENSITIVE_RATE_LIMIT_MAX, timeWindow = 
 
 const db = new Database(dbPath);
 const VALID_STATUSES = new Set(['online', 'offline', 'away']);
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const passwordRules = [
+  {
+    name: 'length',
+    test: (value) => typeof value === 'string' && value.length >= 8,
+    message: 'Password must be at least 8 characters long'
+  },
+  {
+    name: 'upper',
+    test: (value) => /[A-Z]/.test(value),
+    message: 'Password must include at least one uppercase letter'
+  },
+  {
+    name: 'lower',
+    test: (value) => /[a-z]/.test(value),
+    message: 'Password must include at least one lowercase letter'
+  },
+  {
+    name: 'number',
+    test: (value) => /\d/.test(value),
+    message: 'Password must include at least one number'
+  },
+  {
+    name: 'special',
+    test: (value) => /[^A-Za-z0-9\s]/.test(value),
+    message: 'Password must include at least one special character'
+  },
+  {
+    name: 'noSpaces',
+    test: (value) => !/\s/.test(value),
+    message: 'Password must not contain spaces'
+  }
+];
+
+const validatePasswordStrength = (password) => {
+  if (!password || typeof password !== 'string') {
+    return 'Password is required';
+  }
+  const failedRule = passwordRules.find((rule) => !rule.test(password));
+  return failedRule ? failedRule.message : null;
+};
+
+const buildAnonIdentity = (userId) => {
+  const randomHex = crypto.randomBytes(6).toString('hex');
+  const anonUsername = `anon-${userId}-${randomHex}`;
+  const anonDisplay = 'Anonymized User';
+  const anonEmail = `${anonUsername}@anon.invalid`;
+  return { anonUsername, anonDisplay, anonEmail };
+};
 
 // Create users table with all required fields
 db.exec(`
@@ -204,9 +254,6 @@ db.exec(`
     wins INTEGER DEFAULT 0,
     losses INTEGER DEFAULT 0,
     total_matches INTEGER DEFAULT 0,
-    win_streak INTEGER DEFAULT 0,
-    level INTEGER DEFAULT 1,
-    experience INTEGER DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )
 `);
@@ -318,10 +365,7 @@ fastify.get('/users/:id', async (request, reply) => {
              u.created_at,
              COALESCE(s.wins, 0) AS wins,
              COALESCE(s.losses, 0) AS losses,
-             COALESCE(s.total_matches, 0) AS total_matches,
-             COALESCE(s.win_streak, 0) AS win_streak,
-             COALESCE(s.level, 1) AS level,
-             COALESCE(s.experience, 0) AS experience
+             COALESCE(s.total_matches, 0) AS total_matches
       FROM users u
       LEFT JOIN user_stats s ON u.id = s.user_id
       WHERE u.id = ?
@@ -349,7 +393,7 @@ fastify.post('/users', async (request, reply) => {
     return reply.code(400).send({ error: 'Username and email required' });
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+  if (!isValidEmail(normalizedEmail)) {
     return reply.code(400).send({ error: 'Invalid email format' });
   }
 
@@ -375,8 +419,13 @@ fastify.post('/users', async (request, reply) => {
     }
   };
 
+  const passwordError = validatePasswordStrength(password);
+  if (passwordError) {
+    return reply.code(400).send({ error: passwordError });
+  }
+
   try {
-    const password_hash = password ? await bcrypt.hash(password, 10) : null;
+    const password_hash = await bcrypt.hash(password, 10);
     const result = db.prepare(`
       INSERT INTO users (username, email, password_hash, display_name, avatar_url, last_seen, auth_type)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -437,7 +486,7 @@ fastify.patch('/users/:id', async (request, reply) => {
   if (selfId === null) return;
 
   const id = String(selfId);
-  const { display_name, avatar_url, status, username, email } = request.body;
+  const { display_name, avatar_url, status, username, email } = request.body ?? {};
 
   try {
     const updates = [];
@@ -459,12 +508,15 @@ fastify.patch('/users/:id', async (request, reply) => {
     }
 
     if (email !== undefined) {
+      if (typeof email !== 'string' || !email.trim()) {
+        return reply.code(400).send({ error: 'Email cannot be empty' });
+      }
       const normalizedEmail = email.trim().toLowerCase();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      if (!isValidEmail(normalizedEmail)) {
         return reply.code(400).send({ error: 'Invalid email format' });
       }
       const emailConflict = db.prepare(
-        'SELECT 1 FROM users WHERE email = ? AND id != ?'
+        'SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) AND id != ?'
       ).get(normalizedEmail, id);
       if (emailConflict) {
         return reply.code(409).send({ error: 'Email already in use' });
@@ -515,8 +567,16 @@ fastify.patch('/users/:id', async (request, reply) => {
       UPDATE users SET ${updates.join(', ')} WHERE id = ?
     `).run(...values);
 
-    reply.send({ message: 'User updated' });
+    const updatedUser = db.prepare(`
+      SELECT id, username, email, display_name, avatar_url, status, last_seen, created_at, updated_at, auth_type
+      FROM users WHERE id = ?
+    `).get(id);
+
+    reply.send({ message: 'User updated', user: updatedUser });
   } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return reply.code(409).send({ error: 'Username or email already exists' });
+    }
     fastify.log.error(error);
     reply.code(500).send({ error: 'Failed to update user' });
   }
@@ -563,8 +623,9 @@ fastify.patch('/users/:id/password', async (request, reply) => {
   const id = String(selfId);
   const { current_password, new_password } = request.body ?? {};
 
-  if (!new_password || typeof new_password !== 'string' || new_password.length < 8) {
-    return reply.code(400).send({ error: 'New password must be at least 8 characters long' });
+  const strengthError = validatePasswordStrength(new_password);
+  if (strengthError) {
+    return reply.code(400).send({ error: strengthError });
   }
 
   try {
@@ -611,7 +672,7 @@ fastify.patch('/users/:id/stats', async (request, reply) => {
   if (selfId === null) return;
 
   const id = String(selfId);
-  const { won, experience_gained } = request.body;
+  const { won } = request.body;
 
   try {
     const userExists = db.prepare('SELECT 1 FROM users WHERE id = ?').get(id);
@@ -624,19 +685,14 @@ fastify.patch('/users/:id/stats', async (request, reply) => {
     
     const newWins = stats.wins + (won ? 1 : 0);
     const newLosses = stats.losses + (won ? 0 : 1);
-    const newStreak = won ? stats.win_streak + 1 : 0;
-    const newExp = stats.experience + (experience_gained || 0);
-    const newLevel = Math.floor(newExp / 100) + 1;
-    
     db.prepare(`
       UPDATE user_stats
-      SET wins = ?, losses = ?, total_matches = ?, win_streak = ?,
-          experience = ?, level = ?
+      SET wins = ?, losses = ?, total_matches = ?
       WHERE user_id = ?
-    `).run(newWins, newLosses, stats.total_matches + 1, newStreak, newExp, newLevel, id);
+    `).run(newWins, newLosses, stats.total_matches + 1, id);
 
     const updatedStats = db.prepare(`
-      SELECT wins, losses, total_matches, win_streak, level, experience
+      SELECT wins, losses, total_matches
       FROM user_stats WHERE user_id = ?
     `).get(id);
 
@@ -1034,7 +1090,6 @@ fastify.post('/users/:id/avatar', async (request, reply) => {
 const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
-    console.log(`Users Service running on http://0.0.0.0:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

@@ -114,8 +114,6 @@ export async function renderProfileGamePage() {
  
     localStorage.setItem('authenticated_play', 'true');
     
-    console.log('Starting authenticated game for user:', user.username);
-
     const { renderGamePage } = await import('../game/GamePage');
     const queue = [user.username, ...aiAliases];
     renderGamePage(mode, queue);

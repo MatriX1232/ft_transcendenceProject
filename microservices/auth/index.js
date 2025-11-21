@@ -839,8 +839,6 @@ async function testMailSend()
       'Your one-time code is 123456.'
     );
 
-    console.log('Maileroo response:');
-    console.log(responseHtml);
   } catch (err) {
     console.error('Failed to send email:', err);
     process.exitCode = 1;
@@ -849,10 +847,7 @@ async function testMailSend()
 
 const start = async () => {
   try {
-    // await testMailSend();
-
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
-    console.log(`2FA Service running on http://0.0.0.0:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

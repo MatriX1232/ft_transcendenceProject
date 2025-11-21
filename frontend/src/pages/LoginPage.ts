@@ -104,6 +104,35 @@ export function renderLoginPage() {
             <input type="password" id="regPassword" required minlength="6"
                    class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 
                           text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+            <div class="mt-3 bg-black/30 border border-white/10 rounded-xl p-3">
+              <p class="text-sm font-semibold text-cyan-300">${t('passwordRulesTitle')}</p>
+              <ul id="registerPasswordChecklist" class="mt-2 space-y-1 text-xs">
+                <li data-rule="length" class="flex items-center gap-2 text-red-400">
+                  <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                  ${t('passwordRuleLength')}
+                </li>
+                <li data-rule="upper" class="flex items-center gap-2 text-red-400">
+                  <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                  ${t('passwordRuleUpper')}
+                </li>
+                <li data-rule="lower" class="flex items-center gap-2 text-red-400">
+                  <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                  ${t('passwordRuleLower')}
+                </li>
+                <li data-rule="number" class="flex items-center gap-2 text-red-400">
+                  <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                  ${t('passwordRuleNumber')}
+                </li>
+                <li data-rule="special" class="flex items-center gap-2 text-red-400">
+                  <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                  ${t('passwordRuleSpecial')}
+                </li>
+                <li data-rule="nospace" class="flex items-center gap-2 text-red-400">
+                  <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                  ${t('passwordRuleNoSpaces')}
+                </li>
+              </ul>
+            </div>
           </div>
 
           <!-- 2FA selection -->
@@ -145,6 +174,8 @@ export function renderLoginPage() {
   const registerTab = document.getElementById('registerTab') as HTMLButtonElement;
   const loginForm = document.getElementById('loginForm') as HTMLFormElement;
   const registerForm = document.getElementById('registerForm') as HTMLFormElement;
+  const regPasswordInput = document.getElementById('regPassword') as HTMLInputElement;
+  const registerPasswordChecklist = document.getElementById('registerPasswordChecklist') as HTMLUListElement | null;
   const errorMsg = document.getElementById('errorMsg') as HTMLDivElement;
   const backHomeBtn = document.getElementById('backHomeBtn') as HTMLButtonElement;
 
@@ -154,6 +185,30 @@ export function renderLoginPage() {
     errorMsg.classList.remove('hidden');
     setTimeout(() => errorMsg.classList.add('hidden'), 5000);
   }
+
+  const evaluatePasswordRules = (value: string) => ({
+    length: value.length >= 8,
+    upper: /[A-Z]/.test(value),
+    lower: /[a-z]/.test(value),
+    number: /\d/.test(value),
+    special: /[^A-Za-z0-9\s]/.test(value),
+    nospace: !/\s/.test(value)
+  });
+
+  const updateRegisterPasswordChecklist = () => {
+    if (!registerPasswordChecklist) return;
+    const value = regPasswordInput?.value || '';
+    const rules = evaluatePasswordRules(value);
+    Object.entries(rules).forEach(([key, ok]) => {
+      const item = registerPasswordChecklist.querySelector(`[data-rule=\"${key}\"]`) as HTMLLIElement | null;
+      if (!item) return;
+      const dot = item.querySelector('[data-dot]') as HTMLElement | null;
+      item.classList.toggle('text-green-400', ok);
+      item.classList.toggle('text-red-400', !ok);
+      dot?.classList.toggle('bg-green-400', ok);
+      dot?.classList.toggle('bg-red-400', !ok);
+    });
+  };
 
   // Tab switching
   loginTab.onclick = () => {
@@ -173,6 +228,9 @@ export function renderLoginPage() {
     registerForm.classList.remove('hidden');
     loginForm.classList.add('hidden');
   };
+
+  regPasswordInput?.addEventListener('input', updateRegisterPasswordChecklist);
+  updateRegisterPasswordChecklist();
 
   // Back to home
   backHomeBtn.onclick = () => {
@@ -708,6 +766,14 @@ export function renderLoginPage() {
     const password = (document.getElementById('regPassword') as HTMLInputElement).value;
     const authTypeInput = (document.querySelector('input[name="authType"]:checked') as HTMLInputElement);
     const authType = authTypeInput ? authTypeInput.value : 'email';
+
+    const ruleResults = evaluatePasswordRules(password);
+    const allGood = Object.values(ruleResults).every(Boolean);
+    updateRegisterPasswordChecklist();
+    if (!allGood) {
+      showError(t('passwordRulesNotMet'));
+      return;
+    }
 
     const userData = { username, email, password, authType };
 

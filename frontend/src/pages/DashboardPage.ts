@@ -288,15 +288,15 @@ export async function renderDashboardPage() {
   const profileAltText = escapeHtml(user.display_name || user.username || '');
 
   app.innerHTML = `
-    <div class="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 text-white p-8">
-      <div class="max-w-6xl mx-auto">
+    <div class="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 text-white p-8 dashboard-shell">
+      <div class="max-w-6xl mx-auto dashboard-content">
         <!-- Header -->
-        <div class="flex justify-between items-center mb-8">
+        <div class="flex justify-between items-center mb-8 dashboard-header">
           <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r 
                      from-purple-400 via-pink-400 to-cyan-400">
             ${t('dashboard')}
           </h1>
-          <div class="flex gap-4">
+          <div class="flex gap-4 dashboard-actions">
             <select id="dashboardLangSelect"
                     class="px-4 py-2 bg-black/40 border border-white/20 rounded-lg text-white">
               ${languageOptions.map(({ value, label }) =>
@@ -314,8 +314,8 @@ export async function renderDashboardPage() {
           </div>
         </div>
 
-        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 space-y-6">
-          <div class="flex items-center gap-6">
+        <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 space-y-6 dashboard-panels">
+          <div class="flex items-center gap-6 dashboard-profile">
             <div class="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 
                         flex items-center justify-center text-4xl font-bold overflow-hidden">
               <img id="avatarImg" src="${initialAvatarSrc}" alt="${profileAltText}" class="w-24 h-24 rounded-full object-cover" />
@@ -334,7 +334,7 @@ export async function renderDashboardPage() {
             </div>
           </div>
 
-          <div class="flex flex-wrap gap-3 sm:gap-6 border-b border-white/10 pb-2">
+          <div class="flex flex-wrap gap-3 sm:gap-6 border-b border-white/10 pb-2 dashboard-tabs">
             <button id="overviewTab"
                     class="px-4 py-2 text-sm sm:text-base font-semibold border-b-2 border-transparent text-white transition-colors">
               ${t('profileOverview')}
@@ -350,7 +350,7 @@ export async function renderDashboardPage() {
           </div>
 
           <div id="overviewPanel" class="space-y-6">
-            <div id="statsSection" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div id="statsSection" class="grid grid-cols-1 md:grid-cols-4 gap-6 dashboard-cards-grid">
               <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-6 text-center">
                 <p class="text-gray-400 text-sm mb-2">${t('totalMatches')}</p>
                 <p class="text-4xl font-bold text-cyan-400">--</p>
@@ -378,7 +378,7 @@ export async function renderDashboardPage() {
           </div>
 
           <div id="friendsPanel" class="hidden space-y-6">
-            <div id="friendsSection" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div id="friendsSection" class="grid grid-cols-1 xl:grid-cols-3 gap-6 dashboard-friends-grid">
               <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
                 <div class="flex items-center justify-between gap-3 mb-4">
                   <h3 class="text-2xl font-bold truncate">${t('friendsTitle')}</h3>
@@ -497,6 +497,39 @@ export async function renderDashboardPage() {
                          class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
                          autocomplete="new-password" />
                 </div>
+                <div class="bg-black/30 border border-white/10 rounded-xl p-3">
+                  <p class="text-sm font-semibold text-cyan-300">${t('passwordRulesTitle')}</p>
+                  <ul id="passwordChecklist" class="mt-2 space-y-1 text-xs">
+                    <li data-rule="length" class="flex items-center gap-2 text-red-400">
+                      <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                      ${t('passwordRuleLength')}
+                    </li>
+                    <li data-rule="upper" class="flex items-center gap-2 text-red-400">
+                      <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                      ${t('passwordRuleUpper')}
+                    </li>
+                    <li data-rule="lower" class="flex items-center gap-2 text-red-400">
+                      <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                      ${t('passwordRuleLower')}
+                    </li>
+                    <li data-rule="number" class="flex items-center gap-2 text-red-400">
+                      <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                      ${t('passwordRuleNumber')}
+                    </li>
+                    <li data-rule="special" class="flex items-center gap-2 text-red-400">
+                      <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                      ${t('passwordRuleSpecial')}
+                    </li>
+                    <li data-rule="nospace" class="flex items-center gap-2 text-red-400">
+                      <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                      ${t('passwordRuleNoSpaces')}
+                    </li>
+                    <li data-rule="match" class="flex items-center gap-2 text-red-400">
+                      <span data-dot class="w-2 h-2 rounded-full bg-red-400"></span>
+                      ${t('passwordRuleMatch')}
+                    </li>
+                  </ul>
+                </div>
                 <p id="passwordStatusMsg" class="hidden text-sm"></p>
                 <button type="submit"
                         class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-semibold transition">
@@ -522,9 +555,11 @@ export async function renderDashboardPage() {
   const overviewTab = document.getElementById('overviewTab') as HTMLButtonElement | null;
   const friendsTab = document.getElementById('friendsTab') as HTMLButtonElement | null;
   const accountTab = document.getElementById('accountTab') as HTMLButtonElement | null;
+  const privacyTab = document.getElementById('privacyTab') as HTMLButtonElement | null;
   const overviewPanel = document.getElementById('overviewPanel') as HTMLDivElement | null;
   const friendsPanel = document.getElementById('friendsPanel') as HTMLDivElement | null;
   const accountPanel = document.getElementById('accountPanel') as HTMLDivElement | null;
+  const privacyPanel = document.getElementById('privacyPanel') as HTMLDivElement | null;
   const accountForm = document.getElementById('accountForm') as HTMLFormElement | null;
   const displayNameInput = document.getElementById('displayNameField') as HTMLInputElement | null;
   const usernameInput = document.getElementById('usernameField') as HTMLInputElement | null;
@@ -541,6 +576,7 @@ export async function renderDashboardPage() {
   const newPasswordInput = document.getElementById('newPasswordField') as HTMLInputElement | null;
   const confirmPasswordInput = document.getElementById('confirmPasswordField') as HTMLInputElement | null;
   const passwordStatusMsg = document.getElementById('passwordStatusMsg') as HTMLParagraphElement | null;
+  const passwordChecklist = document.getElementById('passwordChecklist') as HTMLUListElement | null;
   const friendSearchForm = document.getElementById('friendSearchForm') as HTMLFormElement | null;
   const friendSearchInput = document.getElementById('friendSearchInput') as HTMLInputElement | null;
   const friendsStatusMsg = document.getElementById('friendsStatusMsg') as HTMLParagraphElement | null;
@@ -585,7 +621,7 @@ export async function renderDashboardPage() {
   updateProfilePresence(user.status, user.last_seen);
 
   const tabConfigs: Array<{
-    key: 'overview' | 'friends' | 'account';
+    key: 'overview' | 'friends' | 'account' | 'privacy';
     button: HTMLButtonElement | null;
     panel: HTMLDivElement | null;
   }> = [
@@ -670,6 +706,42 @@ export async function renderDashboardPage() {
     passwordStatusMsg.classList.add(
       type === 'success' ? 'text-green-400' : type === 'error' ? 'text-red-400' : 'text-cyan-300'
     );
+  };
+
+  const evaluatePasswordRules = (value: string, confirm?: string) => {
+    const lengthOk = value.length >= 8;
+    const upperOk = /[A-Z]/.test(value);
+    const lowerOk = /[a-z]/.test(value);
+    const numberOk = /\d/.test(value);
+    const specialOk = /[^A-Za-z0-9\s]/.test(value);
+    const noSpaceOk = !/\s/.test(value);
+    const matchOk = confirm !== undefined ? value.length > 0 && value === confirm : true;
+    return {
+      length: lengthOk,
+      upper: upperOk,
+      lower: lowerOk,
+      number: numberOk,
+      special: specialOk,
+      nospace: noSpaceOk,
+      match: matchOk
+    };
+  };
+
+  const updatePasswordChecklist = () => {
+    if (!passwordChecklist) return;
+    const value = newPasswordInput?.value || '';
+    const confirm = confirmPasswordInput?.value || '';
+    const rules = evaluatePasswordRules(value, confirm);
+
+    Object.entries(rules).forEach(([key, ok]) => {
+      const item = passwordChecklist.querySelector(`[data-rule="${key}"]`) as HTMLLIElement | null;
+      if (!item) return;
+      const dot = item.querySelector('[data-dot]') as HTMLElement | null;
+      item.classList.toggle('text-green-400', ok);
+      item.classList.toggle('text-red-400', !ok);
+      dot?.classList.toggle('bg-green-400', ok);
+      dot?.classList.toggle('bg-red-400', !ok);
+    });
   };
 
   const clearFriendsStatus = () => {
@@ -768,6 +840,10 @@ export async function renderDashboardPage() {
     }
   };
 
+  newPasswordInput?.addEventListener('input', updatePasswordChecklist);
+  confirmPasswordInput?.addEventListener('input', updatePasswordChecklist);
+  updatePasswordChecklist();
+
   accountForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!displayNameInput || !usernameInput || !emailInput) return;
@@ -784,7 +860,7 @@ export async function renderDashboardPage() {
 
     if (newDisplayName && newDisplayName !== currentDisplayName) payload.display_name = newDisplayName;
     if (newUsername && newUsername !== currentUsername) payload.username = newUsername;
-    if (newEmail && newEmail !== currentEmail) payload.email = newEmail;
+    if (newEmail !== currentEmail) payload.email = newEmail;
 
     if (!Object.keys(payload).length) {
       showAccountStatus('info', t('noChanges'));
@@ -802,15 +878,19 @@ export async function renderDashboardPage() {
         body: JSON.stringify(payload)
       });
 
+      const responseData: any = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.error || t('accountError'));
+        throw new Error(responseData.error || t('accountError'));
       }
 
-      if (payload.display_name) user.display_name = newDisplayName;
-      if (payload.username) user.username = newUsername;
-      if (payload.email) user.email = newEmail;
-
+      if (responseData.user && typeof responseData.user === 'object') {
+        Object.assign(user, responseData.user);
+      } else {
+        if (payload.display_name) user.display_name = newDisplayName;
+        if (payload.username) user.username = newUsername;
+        if ('email' in payload) user.email = newEmail;
+      }
       updateLocalUser();
       localStorage.setItem('username', user.username);
 
@@ -822,7 +902,10 @@ export async function renderDashboardPage() {
       if (emailInput) emailInput.value = user.email || '';
       applyAvatarToUI();
 
-      showAccountStatus('success', t('changesSaved'));
+      const successMessage = typeof responseData.message === 'string'
+        ? responseData.message
+        : t('changesSaved');
+      showAccountStatus('success', successMessage);
     } catch (error) {
       showAccountStatus('error', (error as Error).message);
     } finally {
@@ -949,6 +1032,14 @@ export async function renderDashboardPage() {
 
     if (next !== confirm) {
       showPasswordStatus('error', t('passwordMismatch'));
+      return;
+    }
+
+    const ruleResults = evaluatePasswordRules(next, confirm);
+    const allGood = Object.values(ruleResults).every(Boolean);
+    updatePasswordChecklist();
+    if (!allGood) {
+      showPasswordStatus('error', t('passwordRequirements'));
       return;
     }
 
@@ -1228,11 +1319,9 @@ export async function renderDashboardPage() {
   // Load match history
   try {
     const matchesRes = await fetch(`${MATCHES_API_URL}/matches/user/${user.id}`);
-    console.log('Match history response status:', matchesRes.status);
     
     if (matchesRes.ok) {
       const matches = await matchesRes.json();
-      console.log('Fetched matches:', matches);
       
       const historyDiv = document.getElementById('matchHistory');
       if (historyDiv) {
