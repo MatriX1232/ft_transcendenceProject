@@ -73,32 +73,32 @@ export function startGame(
   const isAIMatch = mode === 'singleplayer' || mode === 'profile-singleplayer';
 
   const AI_PREDICTION_INTERVAL_MS = 1000;
-  let aiErrorFactor = 0.15;
-  let aiMissChance = 0.12;
+  let aiErrorFactor = 0.20;
+  let aiMissChance = 0.20;
   let aiViewInterval = AI_PREDICTION_INTERVAL_MS;
   let aiHoldScale = 1.0;
   let aiPaddleSpeedScale = 1.0;
   switch (aiLevel) {
     case 'easy':
-      aiErrorFactor = 0.8;
-      aiMissChance = 0.5;
-      aiHoldScale = 0.75;
-      aiViewInterval = 1400;
-      aiPaddleSpeedScale = 0.65;
+      aiErrorFactor = 1;
+      aiMissChance = 0.7;
+      aiHoldScale = 0.6;
+      aiViewInterval = 1000;
+      aiPaddleSpeedScale = 0.45;
       break;
     case 'medium':
-      aiErrorFactor = 0.3;
-      aiMissChance = 0.2;
-      aiHoldScale = 1.0;
+      aiErrorFactor = 0.6;
+      aiMissChance = 0.4;
+      aiHoldScale = 0.85;
       aiViewInterval = 1000;
-      aiPaddleSpeedScale = 1.0;
+      aiPaddleSpeedScale = 0.7;
       break;
     case 'hard':
-      aiErrorFactor = 0.05;
-      aiMissChance = 0.05;
-      aiHoldScale = 1.25;
-      aiViewInterval = 650;
-      aiPaddleSpeedScale = 1.4;
+      aiErrorFactor = 0.1;
+      aiMissChance = 0.1;
+      aiHoldScale = 1.05;
+      aiViewInterval = 1000;
+      aiPaddleSpeedScale = 1.0;
       break;
   }
 
@@ -125,7 +125,7 @@ export function startGame(
 
   const WIN_SCORE = settings.winScore;
   const BALL_SPEED = settings.ballSpeed / 2;
-  const PADDLE_SPEED = settings.paddleSpeed;
+  const PADDLE_SPEED = settings.paddleSpeed / 2;
   const AI_PADDLE_SPEED = isAIMatch ? PADDLE_SPEED * aiPaddleSpeedScale : PADDLE_SPEED;
 
   const fieldWidth = 100;
