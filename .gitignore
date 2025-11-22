@@ -1,4 +1,2 @@
-**/certs/
 node_modules/
-*.env*
 *.db
