@@ -98,6 +98,17 @@ services:
       - 1.1.1.1
     env_file:
       - ./.env
+  
+  test-service:
+    container_name: test-microservice
+    build:
+      context: ./microservices/test
+      dockerfile: Dockerfile
+    volumes:
+      - ./microservices/test/src:/app/src
+    restart: unless-stopped
+    networks:
+      - transcendence-network
 
   nginx:
     image: nginx:alpine

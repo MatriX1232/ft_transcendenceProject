@@ -988,12 +988,14 @@ fastify.post('/auth/login', buildRateLimitRouteConfig(), async (request, reply) 
   if (!email || !password) {
     return reply.code(400).send({ error: 'Email and password required' });
   }
+
+  const normalizedEmail = email.trim().toLowerCase();
   
   try {
     const user = db.prepare(`
       SELECT id, username, email, password_hash, display_name, avatar_url, status, auth_type
       FROM users WHERE email = ?
-    `).get(email);
+    `).get(normalizedEmail);
     
     if (!user || !user.password_hash) {
       return reply.code(401).send({ error: 'Invalid credentials' });
