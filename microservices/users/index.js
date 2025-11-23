@@ -193,13 +193,6 @@ const validatePasswordStrength = (password) => {
   return failedRule ? failedRule.message : null;
 };
 
-const buildAnonIdentity = (userId) => {
-  const randomHex = crypto.randomBytes(6).toString('hex');
-  const anonUsername = `anon-${userId}-${randomHex}`;
-  const anonDisplay = 'Anonymized User';
-  const anonEmail = `${anonUsername}@anon.invalid`;
-  return { anonUsername, anonDisplay, anonEmail };
-};
 
 // Create users table with all required fields
 db.exec(`
