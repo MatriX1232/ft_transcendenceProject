@@ -151,12 +151,21 @@ function buildRateLimitRouteConfig(max = SENSITIVE_RATE_LIMIT_MAX, timeWindow = 
 
 const db = new Database(dbPath);
 const VALID_STATUSES = new Set(['online', 'offline', 'away']);
+const USERNAME_MAX_LENGTH = 20;
+const DISPLAY_NAME_MAX_LENGTH = 15;
+const PASSWORD_MAX_LENGTH = 20;
+const EMAIL_MAX_LENGTH = 40;
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const passwordRules = [
   {
     name: 'length',
     test: (value) => typeof value === 'string' && value.length >= 8,
     message: 'Password must be at least 8 characters long'
+  },
+  {
+    name: 'maxLength',
+    test: (value) => typeof value === 'string' && value.length <= PASSWORD_MAX_LENGTH,
+    message: `Password must be at most ${PASSWORD_MAX_LENGTH} characters long`
   },
   {
     name: 'upper',
@@ -386,11 +395,22 @@ fastify.post('/users', async (request, reply) => {
     return reply.code(400).send({ error: 'Username and email required' });
   }
 
+  if (normalizedUsername.length > USERNAME_MAX_LENGTH) {
+    return reply.code(400).send({ error: `Username must be at most ${USERNAME_MAX_LENGTH} characters long` });
+  }
+
+  if (normalizedEmail.length > EMAIL_MAX_LENGTH) {
+    return reply.code(400).send({ error: `Email must be at most ${EMAIL_MAX_LENGTH} characters long` });
+  }
+
   if (!isValidEmail(normalizedEmail)) {
     return reply.code(400).send({ error: 'Invalid email format' });
   }
 
   const displayName = requestedDisplayName || normalizedUsername;
+  if (displayName.length > DISPLAY_NAME_MAX_LENGTH) {
+    return reply.code(400).send({ error: `Display name must be at most ${DISPLAY_NAME_MAX_LENGTH} characters long` });
+  }
   const displayNameInUse = db.prepare(
     'SELECT 1 FROM users WHERE display_name = ?'
   ).get(displayName);
@@ -490,6 +510,9 @@ fastify.patch('/users/:id', async (request, reply) => {
       if (!normalizedUsername) {
         return reply.code(400).send({ error: 'Username cannot be empty' });
       }
+      if (normalizedUsername.length > USERNAME_MAX_LENGTH) {
+        return reply.code(400).send({ error: `Username must be at most ${USERNAME_MAX_LENGTH} characters long` });
+      }
       const usernameConflict = db.prepare(
         'SELECT 1 FROM users WHERE username = ? AND id != ?'
       ).get(normalizedUsername, id);
@@ -505,6 +528,9 @@ fastify.patch('/users/:id', async (request, reply) => {
         return reply.code(400).send({ error: 'Email cannot be empty' });
       }
       const normalizedEmail = email.trim().toLowerCase();
+      if (normalizedEmail.length > EMAIL_MAX_LENGTH) {
+        return reply.code(400).send({ error: `Email must be at most ${EMAIL_MAX_LENGTH} characters long` });
+      }
       if (!isValidEmail(normalizedEmail)) {
         return reply.code(400).send({ error: 'Invalid email format' });
       }
@@ -522,6 +548,9 @@ fastify.patch('/users/:id', async (request, reply) => {
       const normalizedDisplayName = display_name.trim();
       if (!normalizedDisplayName) {
         return reply.code(400).send({ error: 'Display name cannot be empty' });
+      }
+      if (normalizedDisplayName.length > DISPLAY_NAME_MAX_LENGTH) {
+        return reply.code(400).send({ error: `Display name must be at most ${DISPLAY_NAME_MAX_LENGTH} characters long` });
       }
       const displayNameConflict = db.prepare(
         'SELECT 1 FROM users WHERE display_name = ? AND id != ?'
@@ -983,6 +1012,14 @@ fastify.post('/auth/login', buildRateLimitRouteConfig(), async (request, reply) 
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  if (normalizedEmail.length > EMAIL_MAX_LENGTH) {
+    return reply.code(400).send({ error: `Email must be at most ${EMAIL_MAX_LENGTH} characters long` });
+  }
+
+  if (typeof password !== 'string' || password.length > PASSWORD_MAX_LENGTH) {
+    return reply.code(400).send({ error: `Password must be at most ${PASSWORD_MAX_LENGTH} characters long` });
+  }
   
   try {
     const user = db.prepare(`

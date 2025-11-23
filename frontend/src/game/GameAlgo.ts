@@ -1,4 +1,5 @@
 import * as BABYLON from 'babylonjs';
+import ProfileTranslations from '../languages/ProfileLanguages';
 
 export function startGame(
   onMatchEnd: (winnerId: string, winnerDisplay: string) => void,
@@ -136,6 +137,13 @@ export function startGame(
   const playerOneName = displayNames?.p1 ?? p1;
   const playerTwoName = displayNames?.p2 ?? p2;
 
+  // Translation helper for scoreboard text
+  const currentLang = localStorage.getItem('lang') || 'eng';
+  const t = (key: keyof typeof ProfileTranslations['eng']): string => {
+    const pack = ProfileTranslations[currentLang as keyof typeof ProfileTranslations] || ProfileTranslations.eng;
+    return pack[key] || ProfileTranslations.eng[key];
+  };
+
   const scoreboardHost = document.getElementById('app') || document.body;
   let scoreDiv = document.getElementById('scoreDisplay') as HTMLDivElement | null;
   let leftScoreValueEl: HTMLSpanElement | null = null;
@@ -159,7 +167,7 @@ export function startGame(
     leftPlayer.className = 'game-scoreboard-player';
     const leftLabel = document.createElement('span');
     leftLabel.className = 'game-scoreboard-label';
-    leftLabel.textContent = 'Player One';
+    leftLabel.textContent = t('scoreboardPlayerOne');
     const leftName = document.createElement('span');
     leftName.className = 'game-scoreboard-name';
     leftName.textContent = playerOneName;
@@ -182,7 +190,7 @@ export function startGame(
     rightPlayer.className = 'game-scoreboard-player game-scoreboard-player--right';
     const rightLabel = document.createElement('span');
     rightLabel.className = 'game-scoreboard-label';
-    rightLabel.textContent = isAIMatch ? 'AI Opponent' : 'Player Two';
+    rightLabel.textContent = isAIMatch ? t('scoreboardAIOpponent') : t('scoreboardPlayerTwo');
     const rightName = document.createElement('span');
     rightName.className = 'game-scoreboard-name';
     rightName.textContent = playerTwoName;
@@ -192,8 +200,8 @@ export function startGame(
 
     const subtext = document.createElement('p');
     subtext.className = 'game-scoreboard-subtext';
-    const descriptor = isAIMatch ? 'AI showdown' : 'Head-to-head battle';
-    subtext.textContent = `First to ${WIN_SCORE} | ${descriptor}`;
+    const descriptor = isAIMatch ? t('scoreboardDescriptorAI') : t('scoreboardDescriptorPvp');
+    subtext.textContent = `${t('scoreboardFirstTo')} ${WIN_SCORE} | ${descriptor}`;
 
     scoreDiv.append(panel, subtext);
     scoreboardHost.appendChild(scoreDiv);

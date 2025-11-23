@@ -453,13 +453,13 @@ export async function renderDashboardPage() {
 
               <div class="space-y-6">
                 <label for="displayNameField" class="block text-sm font-medium text-cyan-300 mb-2">${t('displayNameLabel')}</label>
-                <input id="displayNameField" type="text"
+                <input id="displayNameField" type="text" maxlength="15"
                        class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
                 <label for="usernameField" class="block text-sm font-medium text-cyan-300 mb-2 mt-4">${t('usernameLabel')}</label>
-                <input id="usernameField" type="text"
+                <input id="usernameField" type="text" maxlength="20"
                        class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
                 <label for="emailField" class="block text-sm font-medium text-cyan-300 mb-2 mt-4">${t('emailLabel')}</label>
-                <input id="emailField" type="email"
+                <input id="emailField" type="email" maxlength="40"
                        class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
               </div>
 
@@ -487,13 +487,13 @@ export async function renderDashboardPage() {
                 </div>
                 <div>
                   <label for="newPasswordField" class="block text-sm font-medium text-cyan-300 mb-2">${t('passwordNewLabel')}</label>
-                  <input id="newPasswordField" type="password"
+                  <input id="newPasswordField" type="password" maxlength="20"
                          class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
                          autocomplete="new-password" />
                 </div>
                 <div>
                   <label for="confirmPasswordField" class="block text-sm font-medium text-cyan-300 mb-2">${t('passwordConfirmLabel')}</label>
-                  <input id="confirmPasswordField" type="password"
+                  <input id="confirmPasswordField" type="password" maxlength="20"
                          class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
                          autocomplete="new-password" />
                 </div>
@@ -707,7 +707,7 @@ export async function renderDashboardPage() {
   };
 
   const evaluatePasswordRules = (value: string, confirm?: string) => {
-    const lengthOk = value.length >= 8;
+    const lengthOk = value.length >= 8 && value.length <= 20;
     const upperOk = /[A-Z]/.test(value);
     const lowerOk = /[a-z]/.test(value);
     const numberOk = /\d/.test(value);
@@ -850,6 +850,21 @@ export async function renderDashboardPage() {
     const newDisplayName = displayNameInput.value.trim();
     const newUsername = usernameInput.value.trim();
     const newEmail = emailInput.value.trim().toLowerCase();
+
+    if (newDisplayName.length > 15) {
+      showAccountStatus('error', 'Display name must be at most 15 characters long.');
+      return;
+    }
+
+    if (newUsername.length > 20) {
+      showAccountStatus('error', 'Username must be at most 20 characters long.');
+      return;
+    }
+
+    if (newEmail.length > 40) {
+      showAccountStatus('error', 'Email must be at most 40 characters long.');
+      return;
+    }
 
     // Compare against current values, treating undefined/null as empty string
     const currentDisplayName = user.display_name || user.username || '';
@@ -1025,6 +1040,11 @@ export async function renderDashboardPage() {
 
     if (next.length < 8) {
       showPasswordStatus('error', t('passwordTooShort'));
+      return;
+    }
+
+    if (next.length > 20) {
+      showPasswordStatus('error', 'Password must be at most 20 characters long.');
       return;
     }
 

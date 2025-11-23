@@ -67,6 +67,12 @@ const ProfileTranslations = {
     nextOpponent: "▶ Next Opponent",
     exit: "✖ Exit",
     winsMessage: "wins!",
+    scoreboardPlayerOne: "Player One",
+    scoreboardPlayerTwo: "Player Two",
+    scoreboardAIOpponent: "AI Opponent",
+    scoreboardDescriptorAI: "AI showdown",
+    scoreboardDescriptorPvp: "Head-to-head battle",
+    scoreboardFirstTo: "First to",
 
     // Account Management
     profileOverview: "Overview",
@@ -184,6 +190,12 @@ const ProfileTranslations = {
     nextOpponent: "▶ Adversaire suivant",
     exit: "✖ Quitter",
     winsMessage: "gagne !",
+    scoreboardPlayerOne: "Joueur un",
+    scoreboardPlayerTwo: "Joueur deux",
+    scoreboardAIOpponent: "IA adverse",
+    scoreboardDescriptorAI: "Duel contre l'IA",
+    scoreboardDescriptorPvp: "Duel en face à face",
+    scoreboardFirstTo: "Premier à",
 
     // Account Management
     profileOverview: "Aperçu",
@@ -301,6 +313,12 @@ const ProfileTranslations = {
     nextOpponent: "▶ Następny przeciwnik",
     exit: "✖ Wyjdź",
     winsMessage: "wygrywa!",
+    scoreboardPlayerOne: "Gracz pierwszy",
+    scoreboardPlayerTwo: "Gracz drugi",
+    scoreboardAIOpponent: "Przeciwnik SI",
+    scoreboardDescriptorAI: "Pojedynek z SI",
+    scoreboardDescriptorPvp: "Pojedynek jeden na jednego",
+    scoreboardFirstTo: "Pierwszy do",
 
     // Account Management
     profileOverview: "Przegląd",
@@ -418,6 +436,12 @@ const ProfileTranslations = {
     nextOpponent: "▶ Siguiente oponente",
     exit: "✖ Salir",
     winsMessage: "¡gana!",
+    scoreboardPlayerOne: "Jugador uno",
+    scoreboardPlayerTwo: "Jugador dos",
+    scoreboardAIOpponent: "Oponente IA",
+    scoreboardDescriptorAI: "Duelo contra IA",
+    scoreboardDescriptorPvp: "Duelo uno contra uno",
+    scoreboardFirstTo: "Primero a",
 
     // Account Management
     profileOverview: "Resumen",

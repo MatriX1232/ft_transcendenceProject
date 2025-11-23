@@ -59,14 +59,14 @@ export function renderLoginPage() {
 
           <div>
             <label class="block text-sm font-medium text-cyan-300 mb-2">${t('emailLabel')}</label>
-            <input type="email" id="loginEmail" required
+            <input type="email" id="loginEmail" required maxlength="40"
                    class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 
                           text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-cyan-300 mb-2">${t('passwordLabel')}</label>
-            <input type="password" id="loginPassword" required
+            <input type="password" id="loginPassword" required maxlength="20"
                    class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 
                           text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
           </div>
@@ -87,21 +87,21 @@ export function renderLoginPage() {
 
           <div>
             <label class="block text-sm font-medium text-cyan-300 mb-2">${t('usernameLabel')}</label>
-            <input type="text" id="regUsername" required
+            <input type="text" id="regUsername" required maxlength="20"
                    class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 
                           text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-cyan-300 mb-2">${t('emailLabel')}</label>
-            <input type="email" id="regEmail" required
+            <input type="email" id="regEmail" required maxlength="40"
                    class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 
                           text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-cyan-300 mb-2">${t('passwordLabel')}</label>
-            <input type="password" id="regPassword" required minlength="6"
+            <input type="password" id="regPassword" required minlength="6" maxlength="20"
                    class="w-full bg-black/50 border border-cyan-500/60 rounded-xl px-4 py-3 
                           text-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
             <div class="mt-3 bg-black/30 border border-white/10 rounded-xl p-3">
@@ -174,6 +174,8 @@ export function renderLoginPage() {
   const registerTab = document.getElementById('registerTab') as HTMLButtonElement;
   const loginForm = document.getElementById('loginForm') as HTMLFormElement;
   const registerForm = document.getElementById('registerForm') as HTMLFormElement;
+  const regUsernameInput = document.getElementById('regUsername') as HTMLInputElement;
+  const regEmailInput = document.getElementById('regEmail') as HTMLInputElement;
   const regPasswordInput = document.getElementById('regPassword') as HTMLInputElement;
   const registerPasswordChecklist = document.getElementById('registerPasswordChecklist') as HTMLUListElement | null;
   const errorMsg = document.getElementById('errorMsg') as HTMLDivElement;
@@ -680,8 +682,20 @@ export function renderLoginPage() {
       return;
     }
 
-    const email = (document.getElementById('loginEmail') as HTMLInputElement).value;
-    const password = (document.getElementById('loginPassword') as HTMLInputElement).value;
+    const emailInput = document.getElementById('loginEmail') as HTMLInputElement;
+    const passwordInput = document.getElementById('loginPassword') as HTMLInputElement;
+    const email = emailInput.value;
+    const password = passwordInput.value;
+
+    if (email.length > 40) {
+      showError('Email must be at most 40 characters long.');
+      return;
+    }
+
+    if (password.length > 20) {
+      showError('Password must be at most 20 characters long.');
+      return;
+    }
 
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
@@ -787,11 +801,26 @@ export function renderLoginPage() {
   // Register handler (updated to request 2FA code/setup and show it)
   registerForm.onsubmit = async (e) => {
     e.preventDefault();
-    const username = (document.getElementById('regUsername') as HTMLInputElement).value;
-    const email = (document.getElementById('regEmail') as HTMLInputElement).value;
-    const password = (document.getElementById('regPassword') as HTMLInputElement).value;
+    const username = regUsernameInput.value;
+    const email = regEmailInput.value;
+    const password = regPasswordInput.value;
     const authTypeInput = (document.querySelector('input[name="authType"]:checked') as HTMLInputElement);
     const authType = authTypeInput ? authTypeInput.value : 'email';
+
+    if (username.length > 20) {
+      showError('Username must be at most 20 characters long.');
+      return;
+    }
+
+    if (email.length > 40) {
+      showError('Email must be at most 40 characters long.');
+      return;
+    }
+
+    if (password.length > 20) {
+      showError('Password must be at most 20 characters long.');
+      return;
+    }
 
     const ruleResults = evaluatePasswordRules(password);
     const allGood = Object.values(ruleResults).every(Boolean);
