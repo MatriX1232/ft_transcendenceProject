@@ -138,7 +138,12 @@ function showMessage(winner: string, message: string) {
 }
 
 /** ---- MAIN RENDER ---- */
-export async function renderGamePage( mode : string , queueOverride?: string[], scores?: Record<string, number> ) {
+export async function renderGamePage(
+  mode: string,
+  queueOverride?: string[],
+  scores?: Record<string, number>,
+  settingsOverride?: GameSettings
+) {
   const app = document.getElementById('app');
   if (!app) return;
 
@@ -218,11 +223,14 @@ export async function renderGamePage( mode : string , queueOverride?: string[], 
   const [p1, p2] = queue;
   const displayP1 = resolveDisplayName(p1);
   const displayP2 = resolveDisplayName(p2);
-  let settings : GameSettings;
-  if(mode === "multiMode")
-     settings = getGameSettings("multi");
-  else
-      settings = getGameSettings(mode);
+  let settings: GameSettings;
+  if (settingsOverride) {
+    settings = settingsOverride;
+  } else if (mode === 'multiMode') {
+    settings = getGameSettings('multi');
+  } else {
+    settings = getGameSettings(mode);
+  }
 
   // Determine button text based on mode
   const nextButtonText = mode === "multiMode" ? t('nextMatch') : mode === "twoplayersmode" ? t('replay'): t('nextOpponent');
@@ -280,7 +288,7 @@ export async function renderGamePage( mode : string , queueOverride?: string[], 
           );
           // Move winner to the front
           const updatedQueue = [winnerId, ...newQueue.filter((p) => p !== winnerId)];
-          renderGamePage(mode , updatedQueue, playerScores);
+          renderGamePage(mode, updatedQueue, playerScores, settings);
         }
        else if("multiMode" != mode)  {
                 const humanPlayer = queue[0]; // always the main player
@@ -304,10 +312,9 @@ export async function renderGamePage( mode : string , queueOverride?: string[], 
 
                 const nextOpponent = opponents[nextIndex];
 
-                //   queue: player + nextOpponent first ,second ,,.....
                 const updatedQueue = [humanPlayer, nextOpponent, ...opponents.filter((ai: string) => ai !== nextOpponent)];
 
-                renderGamePage(mode, updatedQueue, playerScores);
+                renderGamePage(mode, updatedQueue, playerScores, settings);
 }
         
       };

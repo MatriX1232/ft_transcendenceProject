@@ -341,6 +341,15 @@ export function renderLoginPage() {
       sendCode();
     }
 
+    if (twoFAInput && verify2FABtn) {
+      twoFAInput.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          verify2FABtn.click();
+        }
+      });
+    }
+
     if (resend2FABtn) {
       resend2FABtn.onclick = (e) => {
         e.preventDefault();
@@ -539,6 +548,14 @@ export function renderLoginPage() {
       }
       const totpInput = document.getElementById('totpCodeInput') as HTMLInputElement;
       const completeBtn = document.getElementById('completeRegBtn') as HTMLButtonElement;
+      if (totpInput && completeBtn) {
+        totpInput.addEventListener('keydown', (e: KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            completeBtn.click();
+          }
+        });
+      }
       completeBtn.onclick = async () => {
         const code = (totpInput?.value || '').trim();
         if (!code) {
@@ -572,6 +589,15 @@ export function renderLoginPage() {
       const regCodeInput = document.getElementById('regCodeInput') as HTMLInputElement;
       const verifyBtn = document.getElementById('verifyRegCodeBtn') as HTMLButtonElement;
       const resendBtn = document.getElementById('resendRegCodeBtn') as HTMLButtonElement;
+
+      if (regCodeInput && verifyBtn) {
+        regCodeInput.addEventListener('keydown', (e: KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            verifyBtn.click();
+          }
+        });
+      }
 
       const sendCode = async () => {
         try {
