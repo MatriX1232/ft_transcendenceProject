@@ -555,11 +555,9 @@ export async function renderDashboardPage() {
   const overviewTab = document.getElementById('overviewTab') as HTMLButtonElement | null;
   const friendsTab = document.getElementById('friendsTab') as HTMLButtonElement | null;
   const accountTab = document.getElementById('accountTab') as HTMLButtonElement | null;
-  const privacyTab = document.getElementById('privacyTab') as HTMLButtonElement | null;
   const overviewPanel = document.getElementById('overviewPanel') as HTMLDivElement | null;
   const friendsPanel = document.getElementById('friendsPanel') as HTMLDivElement | null;
   const accountPanel = document.getElementById('accountPanel') as HTMLDivElement | null;
-  const privacyPanel = document.getElementById('privacyPanel') as HTMLDivElement | null;
   const accountForm = document.getElementById('accountForm') as HTMLFormElement | null;
   const displayNameInput = document.getElementById('displayNameField') as HTMLInputElement | null;
   const usernameInput = document.getElementById('usernameField') as HTMLInputElement | null;
