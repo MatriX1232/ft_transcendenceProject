@@ -106,6 +106,7 @@ def test_users_service():
             print_result("Login (Invalid Credentials)", False, f"Expected 401, got {response.status_code}")
     except Exception as e:
         print_result("Login (Invalid Credentials)", False, f"Exception: {e}")
+        
 
 def test_auth_service_2fa():
     print("\n--- Testing Auth Service (2FA) ---")
@@ -267,9 +268,70 @@ def test_auth_service_2fa():
     else:
         print_result("Rate Limiting (2FA Verify)", False, "Did not hit rate limit after 15 attempts")
 
+
+def test_email_password_length_limit():
+    print("\n--- Testing Username, Email and Password Length Limits ---")
+
+    # Username with 50 chars -> should be rejected
+    username_50 = "u" * 50
+    email_50 = f"{username_50}@example.com"
+    payload_50 = {
+        "username": username_50,
+        "email": email_50,
+        "password": generate_strong_password(),
+        "display_name": username_50
+    }
+    try:
+        resp = requests.post(f"{USERS_SERVICE_URL}/users", json=payload_50)
+        if resp.status_code == 400:
+            print_result("Create User (Username 50 chars)", True)
+        else:
+            print_result("Create User (Username 50 chars)", False, f"Status: {resp.status_code}, Body: {resp.text}")
+    except Exception as e:
+        print_result("Create User (Username 50 chars)", False, f"Exception: {e}")
+
+    # Email with 50-char local part -> should be rejected
+    local_50 = "e" * 50
+    email_long = f"{local_50}@example.com"
+    username_email = "emailtest_" + generate_random_string(5)
+    payload_email = {
+        "username": username_email,
+        "email": email_long,
+        "password": generate_strong_password(),
+        "display_name": username_email
+    }
+    try:
+        resp = requests.post(f"{USERS_SERVICE_URL}/users", json=payload_email)
+        if resp.status_code == 400:
+            print_result("Create User (Email local part 50 chars)", True)
+        else:
+            print_result("Create User (Email local part 50 chars)", False, f"Expected 400, got {resp.status_code}, Body: {resp.text}")
+    except Exception as e:
+        print_result("Create User (Email local part 50 chars)", False, f"Exception: {e}")
+
+    # Password with 50 chars -> should be rejected
+    username_pass = "passtest_" + generate_random_string(5)
+    email_pass = f"{username_pass}@example.com"
+    password_50 = "P" * 50
+    payload_pass = {
+        "username": username_pass,
+        "email": email_pass,
+        "password": password_50,
+        "display_name": username_pass
+    }
+    try:
+        resp = requests.post(f"{USERS_SERVICE_URL}/users", json=payload_pass)
+        if resp.status_code == 400:
+            print_result("Create User (Password 50 chars)", True)
+        else:
+            print_result("Create User (Password 50 chars)", False, f"Expected 400, got {resp.status_code}, Body: {resp.text}")
+    except Exception as e:
+        print_result("Create User (Password 50 chars)", False, f"Exception: {e}")
+
 if __name__ == "__main__":
     try:
         test_users_service()
         test_auth_service_2fa()
+        test_email_password_length_limit()
     except requests.exceptions.ConnectionError:
         print("\033[91m[FAIL] Could not connect to services. Make sure they are running on ports 3103 and 3105.\033[0m")
