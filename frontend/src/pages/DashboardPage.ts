@@ -1329,10 +1329,11 @@ export async function renderDashboardPage() {
           historyDiv.innerHTML = `<p class="text-gray-400 text-center py-8">${t('noMatches')}</p>`;
         } else {
           historyDiv.innerHTML = matches.map((m: any) => {
-            const isWinner = m.winner === user.username;
-            const opponent = m.player1 === user.username ? m.player2 : m.player1;
-            const safeUser = escapeHtml(user.username);
-            const safeOpponent = escapeHtml(opponent);
+            const player1 = typeof m.player1 === 'string' ? m.player1 : '';
+            const player2 = typeof m.player2 === 'string' ? m.player2 : '';
+            const isWinner = m.winner === player1;
+            const safeUser = escapeHtml(user.display_name || user.username || player1);
+            const safeOpponent = escapeHtml(player2 || player1);
             return `
               <div class="bg-black/30 rounded-lg p-4 flex justify-between items-center border ${isWinner ? 'border-green-500/50' : 'border-red-500/50'}">
                 <div>
