@@ -12,7 +12,16 @@ export function renderLandingPage() {
   if (!app) return;
 
   const isLoggedIn = localStorage.getItem('user') !== null;
-  const username = localStorage.getItem('username') || '';
+  let displayName = '';
+  const storedUser = localStorage.getItem('user');
+  if (storedUser) {
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      displayName = (parsedUser.display_name || parsedUser.username || '') as string;
+    } catch {
+      displayName = localStorage.getItem('username') || '';
+    }
+  }
 
   app.innerHTML = `
   <div class="relative min-h-screen w-screen bg-black overflow-hidden flex flex-col">
@@ -42,7 +51,7 @@ export function renderLandingPage() {
         ${isLoggedIn ? `
           <button onclick="location.href='/dashboard'" 
                   class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition">
-            👤 ${username}
+            👤 ${displayName}
           </button>
         ` : `
           <button onclick="location.href='/login'" 
