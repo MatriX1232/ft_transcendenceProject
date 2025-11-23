@@ -86,11 +86,6 @@ export function renderLandingPage() {
       </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="relative z-10 flex justify-center items-center h-[10vh] text-sm text-white opacity-80">
-      2025 © All rights reserved — Transcendence
-    </footer>
-
     <!-- Floating Decorations -->
     <div class="absolute top-1/3 left-10 h-28 w-4 bg-cyan-500 rounded-lg shadow-lg shadow-cyan-500/50 z-0 animate-pulse"></div>
     <div class="absolute top-2/3 right-10 h-28 w-4 bg-pink-500 rounded-lg shadow-lg shadow-pink-500/50 z-0 animate-pulse"></div>
