@@ -66,6 +66,8 @@ function addPlayer(alias: string): void {
   if (players.includes(alias)) {
     throw new Error(`Alias already exists: ${alias}`);
   }
+  else if (alias.length > 10)
+       throw new Error(`Alias must be less than 10 chars`);
   players.push(alias);
   savePlayers(players);
 }
@@ -124,7 +126,7 @@ export function renderRegistrationPage() {
         <div>
           <h1 class="text-4xl font-semibold mb-6 border-b border-gray-700 pb-3">${t('registration')}</h1>
           <div class="flex gap-4 mb-6">
-            <input type="text" id="alias" placeholder="${t('enterAlias')}" 
+            <input maxlength="10" type="text" id="alias" placeholder="${t('enterAlias')}" 
               class="flex-grow px-4 py-3 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 bg-transparent" />
             <button id="addBtn" 
               class="px-6 py-3 bg-pink-500 hover:bg-pink-600 rounded-lg font-semibold shadow-md transition">
