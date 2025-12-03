@@ -1,12 +1,11 @@
 # ⚔️ Transcendence Game Project ⚔️
 
-This project is a web-based game application featuring a Pong game with single-player (AI opponent) and multiplayer modes. It incorporates user authentication, profile management, match history, and real-time gameplay. The application is built using a microservices architecture orchestrated with Docker Compose, ensuring scalability and maintainability.
+This project is a web-based game application featuring a Pong game with single-player (AI opponent) and multiplayer modes. It incorporates user authentication, profile management, match history. The application is built using a microservices architecture orchestrated with Docker Compose, ensuring scalability and maintainability.
 
 ## 🚀 Key Features
 
 - **🕹️ Engaging Gameplay:** Classic Pong game with responsive design and customizable settings.
 - **🤖 AI Opponent:** Single-player mode with adjustable AI difficulty.
-- **👥 Multiplayer Mode:** Play against other users in real-time matches.
 - **🔐 User Authentication:** Secure user registration, login, and two-factor authentication (2FA).
 - **👤 Profile Management:** User profiles with avatars, usernames, and status updates.
 - **📊 Match History:** Track your game statistics and view past matches.
